@@ -14,7 +14,7 @@ const Stats = (props: StatsProps) => {
       getEnabledChallenges(props.configData.courses, props.challengeData)
     ).filter((c) => c.malId);
 
-  const getAnimeListForCourse = (course: string) =>
+  const getAnimeListForCourse = (course: CourseItem) =>
     getAnimeList().filter((c) => c.courses.includes(course));
 
   return (
@@ -81,10 +81,13 @@ const Stats = (props: StatsProps) => {
               </Typography>
               <StatsProgressBar
                 key={`${course}-progress-bar`}
-                ptw={getAnimeListForCourse(course).reduce((acc, challenge) => {
-                  return acc + (!challenge.startDate ? 1 : 0);
-                }, 0)}
-                watching={getAnimeListForCourse(course).reduce(
+                ptw={getAnimeListForCourse(course as CourseItem).reduce(
+                  (acc, challenge) => {
+                    return acc + (!challenge.startDate ? 1 : 0);
+                  },
+                  0
+                )}
+                watching={getAnimeListForCourse(course as CourseItem).reduce(
                   (acc, challenge) => {
                     return (
                       acc + (challenge.startDate && !challenge.endDate ? 1 : 0)
@@ -92,7 +95,7 @@ const Stats = (props: StatsProps) => {
                   },
                   0
                 )}
-                complete={getAnimeListForCourse(course).reduce(
+                complete={getAnimeListForCourse(course as CourseItem).reduce(
                   (acc, challenge) => {
                     return acc + (challenge.endDate ? 1 : 0);
                   },
