@@ -1,22 +1,25 @@
 import { useState } from 'react';
-import { getEnabledMinigames } from './data/data';
+import { getEnabledCourses as getEnabledCourses } from './data/data';
 import Sidebar from './Sidebar';
 import { ChallengesProps } from './types';
-import Minigame from './Minigame';
+import Course from './Course';
 import './Challenges.css';
+import { CourseItem } from '../../types';
 
 function Challenges(props: ChallengesProps) {
-  const [currentMinigame, setCurrentMinigame] = useState<string>('');
+  const [currentCourse, setCurrentCourse] = useState<CourseItem>(
+    '' as CourseItem
+  );
 
   return (
     <div className="App">
       <div className="container">
         <Sidebar
-          minigames={getEnabledMinigames(props.config.minigames)}
-          setCurrentMinigame={setCurrentMinigame}
+          courses={getEnabledCourses(props.config.courses)}
+          setCurrentCourse={setCurrentCourse}
         />
         <div className="separator"></div>
-        <Minigame currentMinigame={currentMinigame} {...props} />
+        <Course currentCourse={currentCourse} {...props} />
       </div>
     </div>
   );

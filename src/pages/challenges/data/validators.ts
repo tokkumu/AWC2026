@@ -1,6 +1,7 @@
+import { AnimeDetails, CourseItem } from '../../../types';
 import { ConfigData } from '../../config/types';
-import { ChallengeData, ChallengeEntry } from '../types';
-import { CHALLENGE_LIST } from './data';
+import { ChallengeData } from '../types';
+import { CHALLENGE_LIST, COURSE_DATA } from './data';
 import {
   ValidationStatus,
   Validator,
@@ -8,32 +9,11 @@ import {
   ValidatorStatus,
 } from './types';
 
-const restrictionMap: Record<string, Validator> = {
-  Warrior: validateTags(['Action'], 1),
-  Adventurer: validateTags(['Adventure'], 1),
-  Jester: validateTags(['Comedy'], 1),
-  Thespian: validateTags(['Drama'], 1),
-  Minstrel: validateTags(['Fantasy'], 1),
-  Sorcerer: validateTags(['Romance'], 1),
-  Guardian: validateTags(['Shounen'], 1),
-  Cleric: validateTags(['Slice of Life'], 1),
-  Watcher: validateType(['TV']),
-  Seeker: validateType(['Movie']),
-  Finder: validateType(['OVA']),
-  Neutral: validateRating(['PG-13']),
-  'Chaotic Evil': validateRating([
-    'R - 17+ (violence & profanity)',
-    'R+ - Mild Nudity',
-  ]),
-  Indomitable: validateEpisodeDuration(20, 'gte'),
-  Almighty: validateType(['TV']),
-};
-
 export function validateAnime(
   config: ConfigData,
   challengeData: ChallengeData,
   challengeId: string,
-  minigame: string
+  course: CourseItem
 ): ValidationStatus {
   if (!challengeData[challengeId].animeData) {
     return { valid: false, success: [], error: ['Anime not found'] };
@@ -43,121 +23,19 @@ export function validateAnime(
     anime: challengeData[challengeId].animeData,
     config,
     entry: challengeData[challengeId],
+    course,
   };
 
-  const formValidators = buildResponse(
-    [
-      validateUniqueAnime(challengeData),
-      validateStartYear(),
-      validateEndYear(),
-      validateStartEndDates(),
-    ].map((validator) => validator(params))
-  );
-
-  if (!formValidators.valid) {
-    return formValidators;
-  }
-
-  const allValidators = [...CHALLENGE_LIST[challengeId].validators];
-
-  if (minigame.startsWith('Whack-a-Mole')) {
-    if (`Whack-a-Mole ${config.minigames.whackamole1}` === minigame) {
-      allValidators.push(
-        ...config.minigames.whackamole1Restrictions.map(
-          (r) => restrictionMap[r]
-        )
-      );
-    } else if (`Whack-a-Mole ${config.minigames.whackamole2}` === minigame) {
-      allValidators.push(
-        ...config.minigames.whackamole2Restrictions.map(
-          (r) => restrictionMap[r]
-        )
-      );
-    } else if (`Whack-a-Mole ${config.minigames.whackamole3}` === minigame) {
-      allValidators.push(
-        ...config.minigames.whackamole3Restrictions.map(
-          (r) => restrictionMap[r]
-        )
-      );
-    }
-
-    if (config.minigames.whackamoleRestrictions.includes('Exalted')) {
-      allValidators.push(restrictionMap[config.minigames.exaltedRestriction]);
-    }
-
-    if (config.minigames.whackamoleRestrictions.includes('Supreme')) {
-      allValidators.push(restrictionMap[config.minigames.supremeRestriction]);
-    }
-
-    if (config.minigames.whackamoleRestrictions.includes('Indomitable')) {
-      allValidators.push(restrictionMap['Indomitable']);
-    }
-
-    if (config.minigames.whackamoleRestrictions.includes('Almighty')) {
-      allValidators.push(restrictionMap['Almighty']);
-    }
-  }
-
-  if (minigame.startsWith('Tarot') || minigame.startsWith('Plinko')) {
-    switch (minigame) {
-      case 'Tarot Route 2':
-        allValidators.push(
-          validatePreviousTierCompleted(
-            Object.values(challengeData).filter((entry) =>
-              entry.minigames.includes('Tarot Route 1')
-            )
-          )
-        );
-        break;
-      case 'Tarot Route 3':
-        allValidators.push(
-          validatePreviousTierCompleted(
-            Object.values(challengeData).filter((entry) =>
-              entry.minigames.includes('Tarot Route 1')
-            )
-          )
-        );
-        break;
-      case 'Tarot Route 2.1':
-      case 'Tarot Route 2.2':
-        allValidators.push(
-          validatePreviousTierCompleted(
-            Object.values(challengeData).filter((entry) =>
-              entry.minigames.includes('Tarot Route 2')
-            )
-          )
-        );
-        break;
-      case 'Tarot Route 3.1':
-      case 'Tarot Route 3.2':
-        allValidators.push(
-          validatePreviousTierCompleted(
-            Object.values(challengeData).filter((entry) =>
-              entry.minigames.includes('Tarot Route 3')
-            )
-          )
-        );
-        break;
-      case 'Plinko Tier 2':
-        allValidators.push(
-          validatePreviousTierCompleted(
-            Object.values(challengeData).filter((entry) =>
-              entry.minigames.includes('Plinko Tier 1')
-            )
-          )
-        );
-        break;
-      case 'Plinko Tier 3':
-        allValidators.push(
-          validatePreviousTierCompleted(
-            Object.values(challengeData).filter((entry) =>
-              entry.minigames.includes('Plinko Tier 2')
-            )
-          )
-        );
-        break;
-    }
-  }
+  const allValidators = [
+    validateUniqueAnime(challengeData),
+    validateStartYear(),
+    validateEndYear(),
+    validateStartEndDates(),
+    validateManualValidators(),
+    validateExtraInfo(),
+    ...COURSE_DATA[course].validators,
+    ...CHALLENGE_LIST[challengeId].validators,
+  ];
 
   return buildResponse(allValidators.map((validator) => validator(params)));
 }
@@ -204,8 +82,8 @@ export function validateUniqueAnime(challengeData: ChallengeData): Validator {
 export function validateStartYear(): Validator {
   return ({ entry }: ValidatorParams) => {
     return {
-      criterion: 'Anime must be started in 2025',
-      valid: !entry.startDate || entry.startDate.startsWith('2025'),
+      criterion: 'Anime must be started in 2026',
+      valid: !entry.startDate || entry.startDate.startsWith('2026'),
     };
   };
 }
@@ -213,8 +91,8 @@ export function validateStartYear(): Validator {
 export function validateEndYear(): Validator {
   return ({ entry }: ValidatorParams) => {
     return {
-      criterion: 'Anime must be finished in 2025',
-      valid: !entry.endDate || entry.endDate.startsWith('2025'),
+      criterion: 'Anime must be finished in 2026',
+      valid: !entry.endDate || entry.endDate.startsWith('2026'),
     };
   };
 }
@@ -229,28 +107,25 @@ export function validateStartEndDates(): Validator {
   };
 }
 
-export function validatePreviousTierCompleted(previous: ChallengeEntry[]) {
-  previous = previous.filter(
-    (entry) =>
-      entry.animeData &&
-      !(
-        entry.animeData?.episodes >= 45 &&
-        entry.animeData?.episodeDurationMinutes >= 20
-      )
-  );
-
-  return ({ entry }: ValidatorParams) => {
-    const invalid = previous.filter(
-      (prev) => !prev.endDate || prev.endDate > entry.startDate
-    );
+export function validateManualValidators(): Validator {
+  return ({ entry, course }: ValidatorParams) => {
     return {
-      criterion: 'Previous tier must be completed before starting',
-      valid:
-        (entry.animeData &&
-          entry.animeData?.episodes >= 45 &&
-          entry.animeData?.episodeDurationMinutes >= 20) ||
-        !entry.startDate ||
-        invalid.length === 0,
+      criterion: 'All manual validators must be validated',
+      valid: Object.values(entry.manualValidators)
+        .filter((v) => !v.courses || v.courses.includes(course))
+        .every((v) => v.valid),
+    };
+  };
+}
+
+export function validateExtraInfo(): Validator {
+  return ({ entry, course }: ValidatorParams) => {
+    return {
+      criterion: 'All default extra info must be specified',
+      valid: Object.values(entry.extraInfo)
+        .filter((i) => i.required)
+        .filter((i) => !i.courses || i.courses.includes(course))
+        .every((v) => v.value),
     };
   };
 }
@@ -508,6 +383,17 @@ export function validateScore(rating: number, exp: 'gte' | 'lte'): Validator {
   };
 }
 
+export function validateScoreContains(strs: string[]): Validator {
+  return (params: ValidatorParams) => {
+    return {
+      criterion: `Anime score must contain one of the following: ${arrayToList(strs)}`,
+      valid: strs.some((score) =>
+        params.anime.score.toString().includes(score)
+      ),
+    };
+  };
+}
+
 export function validateFavorites(
   favorites: number,
   exp: 'gte' | 'lte'
@@ -566,11 +452,254 @@ export function validateWordsWithSameLetter(count: number): Validator {
   };
 }
 
-export function validateStack(stack: number[]): Validator {
+export function validateTitleStartsWith(
+  letters: string[],
+  other: boolean = false
+): Validator {
+  return (params: ValidatorParams) => {
+    const titleFirstLetter = params.anime.title.toUpperCase().charAt(0);
+    return {
+      criterion: `Anime title must start with ${arrayToList([...letters, ...(other ? ['a number/symbol'] : [])])}`,
+      valid:
+        letters.includes(titleFirstLetter) ||
+        (other && !!titleFirstLetter.match(/[^A-Z]/)),
+    };
+  };
+}
+
+export function validateCompanyStartsWith(
+  letters: string[],
+  other: boolean = false
+): Validator {
+  return (params: ValidatorParams) => {
+    const criterion = `A Licensor/Producer/Studio must start with ${arrayToList([...letters, ...(other ? ['a number/symbol'] : [])])}`;
+    const companies = [
+      ...params.anime.licensors,
+      ...params.anime.producers,
+      ...params.anime.studios,
+    ];
+    for (const company of companies) {
+      const companyFirstLetter = company.toUpperCase().charAt(0);
+      if (
+        letters.includes(companyFirstLetter) ||
+        (other && !!companyFirstLetter.match(/[^A-Z]/))
+      ) {
+        return {
+          criterion,
+          valid: true,
+        };
+      }
+    }
+    return {
+      criterion,
+      valid: false,
+    };
+  };
+}
+
+export function validateCompany(companies: string[]): Validator {
+  return (params: ValidatorParams) => {
+    const animeCompanies = [
+      ...params.anime.licensors,
+      ...params.anime.producers,
+      ...params.anime.studios,
+    ];
+    return {
+      criterion: `Anime must be from one of: ${arrayToList(companies)}`,
+      valid: companies.some((company) => animeCompanies.includes(company)),
+    };
+  };
+}
+
+export function validateStudioProducerStartInUsername(): Validator {
+  return (params: ValidatorParams) => {
+    const companies = [...params.anime.studios, ...params.anime.producers]
+      .map((c) => c.charAt(0).toUpperCase())
+      .filter((c) => c.match(/[A-Z]/));
+    return {
+      criterion: `Anime must be made by a studio/producer which starts with a letter in your username.`,
+      valid: companies.some((c) =>
+        params.config.username.toUpperCase().includes(c)
+      ),
+    };
+  };
+}
+
+export function validateStatistics(
+  stat: keyof AnimeDetails['statistics'],
+  count: number,
+  exp: 'gt' | 'lt'
+): Validator {
   return (params: ValidatorParams) => {
     return {
-      criterion: `Anime must be in stack`,
-      valid: stack.includes(params.anime.malId),
+      criterion: `Anime must have ${exp === 'gt' ? 'more than' : 'less than'} ${count} ${stat} members`,
+      valid:
+        exp === 'gt'
+          ? params.anime.statistics[stat] > count
+          : params.anime.statistics[stat] < count,
+    };
+  };
+}
+
+export function validateTitleNonAlphanumericCount(
+  count: number,
+  exp: 'gte' | 'lte'
+): Validator {
+  return (params: ValidatorParams) => {
+    const title = params.anime.title.replace(/[a-zA-Z0-9 ]/g, '');
+    const uniqueChars = new Set(title.split('')).size;
+    return {
+      criterion: `Anime title must have ${exp === 'gte' ? 'at least' : 'at most'} ${count} different non-alphanumeric characters`,
+      valid: exp === 'gte' ? uniqueChars >= count : uniqueChars <= count,
+    };
+  };
+}
+
+export function validateTitleUsernameShareCount(
+  count: number,
+  exp: 'gte' | 'lte'
+): Validator {
+  return (params: ValidatorParams) => {
+    const title = params.anime.title.toUpperCase();
+    const uniqueChars = [...new Set(title.split(''))];
+    const sharedChars = uniqueChars.filter((c) =>
+      params.config.username.toUpperCase().includes(c)
+    );
+    return {
+      criterion: `Anime title must have ${exp === 'gte' ? 'at least' : 'at most'} ${count} shared characters`,
+      valid:
+        exp === 'gte'
+          ? sharedChars.length >= count
+          : sharedChars.length <= count,
+    };
+  };
+}
+
+/**
+ * Whole Course Validators
+ */
+export function cvalidateBroadcastDate(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const day = params.config.courseValidatorInfo[course].Day;
+    return {
+      criterion: `Anime must air on ${day}`,
+      valid: day === params.anime.aired.day,
+    };
+  };
+}
+
+export function cvalidateCompany(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const animeCompanies = [
+      ...params.anime.licensors,
+      ...params.anime.producers,
+      ...params.anime.studios,
+    ].map((c) => c.toLowerCase());
+    const company =
+      params.config.courseValidatorInfo[course]['Licensor/Producor/Studio'];
+    return {
+      criterion: `Anime must be from ${company}`,
+      valid: animeCompanies.includes(company.toLowerCase()),
+    };
+  };
+}
+
+export function cvalidateDemographic(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const demographic = params.config.courseValidatorInfo[course].Demographic;
+    return {
+      criterion: `Anime must be tagged with ${demographic}`,
+      valid: params.anime.demographics.includes(demographic),
+    };
+  };
+}
+
+export function cvalidateStartMonth(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const month = +params.config.courseValidatorInfo[course].Month;
+    return {
+      criterion: `Anime must have start airing in ${numberToMonth(month)}`,
+      valid: month === params.anime.aired.from.month,
+    };
+  };
+}
+
+export function cvalidateSeason(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const season = params.config.courseValidatorInfo[course].Season;
+    const seasonMap = {
+      Winter: [1, 2, 3],
+      Spring: [4, 5, 6],
+      Summer: [7, 8, 9],
+      Fall: [10, 11, 12],
+    };
+    return {
+      criterion: `Anime must start airing in ${season}`,
+      valid: seasonMap[season as keyof typeof seasonMap].includes(
+        params.anime.aired.from.month
+      ),
+    };
+  };
+}
+
+export function cvalidateEpisodeCount(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const count =
+      +params.config.courseValidatorInfo[course]['Number of Episodes'];
+    return {
+      criterion: `Anime must have ${count} episodes`,
+      valid: count === params.anime.episodes,
+    };
+  };
+}
+
+export function cvalidateGenreTheme(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const tags = [...params.anime.genres, ...params.anime.themes].map((c) =>
+      c.toLowerCase()
+    );
+    const tag1 = params.config.courseValidatorInfo[course]['Genre/Theme #1'];
+    const tag2 = params.config.courseValidatorInfo[course]['Genre/Theme #2'];
+    return {
+      criterion: `Anime must be tagged with ${tag2 ? arrayToList([tag1, tag2]) : tag1}`,
+      valid:
+        tags.includes(tag1.toLowerCase()) || tags.includes(tag2.toLowerCase()),
+    };
+  };
+}
+
+export function cvalidateStartYear(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const year = params.anime.aired.from.year.toString();
+    const year1 = params.config.courseValidatorInfo[course]['Year #1'];
+    const year2 = params.config.courseValidatorInfo[course]['Year #2'];
+    return {
+      criterion: `Anime must start airing in ${year2 ? arrayToList([year1, year2]) : year1}`,
+      valid: year === year1 || year === year2,
+    };
+  };
+}
+
+export function cvalidateType(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const type = params.config.courseValidatorInfo[course]['Type'];
+    return {
+      criterion: `Anime must be of type ${type}`,
+      valid: params.anime.type === type,
+    };
+  };
+}
+
+export function cvalidateStartsWith(course: CourseItem): Validator {
+  return (params: ValidatorParams) => {
+    const letter = params.config.courseValidatorInfo[course]['Letter'];
+    const titleFirstChar = params.anime.title.toUpperCase().charAt(0);
+    return {
+      criterion: `Anime title must start with ${letter === 'Other' ? 'a symbol' : letter}`,
+      valid:
+        letter === 'Other'
+          ? !!titleFirstChar.match(/[^a-zA-Z0-9]/)
+          : titleFirstChar === letter,
     };
   };
 }

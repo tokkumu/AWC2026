@@ -1,50 +1,52 @@
-import { AnimeDetails } from '../../types';
+import { AnimeDetails, CourseItem } from '../../types';
 import { ChallengeData, ChallengeEntry } from '../challenges/types';
 import { ConfigData } from '../config/types';
 import get from 'lodash/get';
 import { signupText } from './data/signup';
-import { dartsText } from './data/darts';
-import { bingoText } from './data/bingo';
-import { plinkoText } from './data/plinko';
-import { whackamoleText } from './data/whackamole';
-import { tarotText } from './data/tarot';
-import { CHALLENGE_LIST, getEnabledChallenges } from '../challenges/data/data';
-import { duckpondText } from './data/duckpond';
+import {
+  CHALLENGE_LIST,
+  COURSE_DATA,
+  getEnabledChallenges,
+} from '../challenges/data/data';
+import { courseText } from './data/course';
+
+const COURSE_COLORS = {
+  drink: '5B2C6F',
+  starter: '3B6C4C',
+  main: '943126',
+  side: '916247',
+  dessert: 'CA5C2B',
+};
 
 export function generateBBCode(
   challengeDetails: ChallengeData,
   configData: ConfigData
 ) {
-  const darts = configData.minigames.darts
-    ? generateDarts(challengeDetails, configData)
+  const drink = configData.courses.drink.enabled
+    ? generateCourseText(challengeDetails, configData, 'drink', 1)
     : '';
-  const bingo = configData.minigames.bingo
-    ? generateBingo(challengeDetails, configData)
+  const starter = configData.courses.starter.enabled
+    ? generateCourseText(challengeDetails, configData, 'starter', 2)
     : '';
-  const plinko = configData.minigames.plinko
-    ? generatePlinko(challengeDetails, configData)
+  const main = configData.courses.main.enabled
+    ? generateCourseText(challengeDetails, configData, 'main', 3)
     : '';
-  const whackamole = configData.minigames.whackamole
-    ? generateWhackamole(challengeDetails, configData)
+  const side = configData.courses.side.enabled
+    ? generateCourseText(challengeDetails, configData, 'side', 4)
     : '';
-  const tarot = configData.minigames.tarot
-    ? generateTarot(challengeDetails, configData)
+  const dessert = configData.courses.dessert.enabled
+    ? generateCourseText(challengeDetails, configData, 'dessert', 5)
     : '';
-  const duckpond = configData.minigames.duckpond
-    ? generateDuckpond(challengeDetails, configData)
-    : '';
-  const minigamesText = [darts, bingo, plinko, whackamole, tarot, duckpond]
+  const coursesText = [drink, starter, main, side, dessert]
     .filter((m) => !!m)
     .join('\n\n');
 
   const templateData = {
     challengeDetails,
     configData,
-    minigamesText,
+    coursesText,
     ...calculateStartEndDates(
-      Object.values(
-        getEnabledChallenges(configData.minigames, challengeDetails)
-      )
+      Object.values(getEnabledChallenges(configData.courses, challengeDetails))
     ),
   };
 
@@ -120,276 +122,67 @@ function formatEntry(params: {
   anime?: AnimeDetails;
   challenge: ChallengeEntry;
   legend: ConfigData['legend'];
+  extraInfoColor: string;
+  course: CourseItem;
 }) {
-  const { anime, challenge, legend } = params;
-  return `[*][color=${legendToColor(legend, challenge)}][Started: ${formatDate(challenge.startDate)}] [Finished: ${formatDate(challenge.endDate)}][/color] ${CHALLENGE_LIST[challenge.id].bbCode}\n[url=https://myanimelist.net/anime/${challenge.malId ?? ''}]${anime?.title ?? 'ANIME_TITLE'}[/url]${challenge.extraInfo ? `\n[color=#B22222][${challenge.extraInfo}][/color]` : ''}`;
+  const { anime, challenge, course, legend, extraInfoColor } = params;
+  const extraInfo = challenge.extraInfo.filter(
+    (i) => !i.courses || i.courses.includes(course)
+  );
+  return [
+    '[*]',
+    `[color=${legendToColor(legend, challenge)}]`,
+    `[Started: ${formatDate(challenge.startDate)}] [Finished: ${formatDate(challenge.endDate)}]`,
+    '[/color] ',
+    `${CHALLENGE_LIST[challenge.id].bbCode}\n`,
+    `[url=https://myanimelist.net/anime/${challenge.malId ?? ''}]`,
+    `${anime?.title ?? 'ANIME_TITLE'}`,
+    '[/url]',
+    `${extraInfo.length ? `\n[color=#${extraInfoColor}][${extraInfo.map((i) => `${i.key} ${i.value}`).join(' | ')}][/color]` : ''}`,
+  ].join('');
 }
 
-function generateDarts(
-  challengeDetails: ChallengeData,
-  configData: ConfigData
+function formatCourseValidatorInfo(
+  info: Record<string, string>,
+  color: string
 ) {
-  const challenges = Object.values(challengeDetails).filter(
-    (entry) => entry.minigames.includes('Darts') && entry.malId
-  );
-
-  return replaceTemplates(dartsText, {
-    darts: challenges
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-  });
+  return info
+    ? Object.entries(info)
+        .map(
+          ([key, value]) =>
+            `[color=#${color}][b]${key} Used :[/b][/color] ${value}`
+        )
+        .join('\n') + '\n'
+    : '';
 }
 
-function generateBingo(
+function generateCourseText(
   challengeDetails: ChallengeData,
-  configData: ConfigData
+  configData: ConfigData,
+  course: keyof ConfigData['courses'],
+  courseNumber: number
 ) {
+  const courseItem = configData.courses[course].value;
   const challenges = Object.values(challengeDetails).filter(
-    (entry) =>
-      entry.minigames.includes(
-        configData.minigames.bingo17 === '17A' ? 'Bingo 17A' : 'Bingo 17B'
-      ) && entry.malId
-  );
-  const challenges2 = Object.values(challengeDetails).filter(
-    (entry) =>
-      entry.minigames.includes(
-        configData.minigames.bingo21 === '21A' ? 'Bingo 21A' : 'Bingo 21B'
-      ) && entry.malId
+    (entry) => entry.courses.includes(courseItem) && entry.malId
   );
 
-  return replaceTemplates(bingoText, {
-    bingo17Name: configData.minigames.bingo17,
-    bingo17: challenges
+  return replaceTemplates(courseText, {
+    courseNumber,
+    courseTitle: `${courseItem.toUpperCase()}: ${COURSE_DATA[courseItem].label}`,
+    courseColor: COURSE_COLORS[course],
+    courseValidatorInfo: formatCourseValidatorInfo(
+      configData.courseValidatorInfo[courseItem],
+      COURSE_COLORS[course]
+    ),
+    courseChallenges: challenges
       .map((challenge) =>
         formatEntry({
           anime: challenge.animeData,
           challenge,
           legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-    bingo21Name: configData.minigames.bingo21,
-    bingo21: challenges2
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-  });
-}
-
-function generatePlinko(
-  challengeDetails: ChallengeData,
-  configData: ConfigData
-) {
-  const challenges = Object.values(challengeDetails).filter(
-    (entry) => entry.minigames.includes('Plinko Tier 1') && entry.malId
-  );
-  const challenges2 = Object.values(challengeDetails).filter(
-    (entry) => entry.minigames.includes('Plinko Tier 2') && entry.malId
-  );
-  const challenges3 = Object.values(challengeDetails).filter(
-    (entry) => entry.minigames.includes('Plinko Tier 3') && entry.malId
-  );
-
-  return replaceTemplates(plinkoText, {
-    plinko1FinishDate: calculateStartEndDates(challenges).finishDate,
-    plinko2FinishDate: calculateStartEndDates(challenges2).finishDate,
-    plinko3FinishDate: calculateStartEndDates(challenges3).finishDate,
-    plinko1: challenges
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-    plinko2: challenges2
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-    plinko3: challenges3
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-  });
-}
-
-function generateWhackamole(
-  challengeDetails: ChallengeData,
-  configData: ConfigData
-) {
-  const names: Record<string, string> = {
-    A: 'QUEST A - Wizard',
-    B: 'QUEST B - Hunter',
-    C: 'QUEST C - Barbarian',
-    D: 'QUEST D - Bard',
-    E: 'QUEST E - Rogue',
-  };
-
-  const challenges = Object.values(challengeDetails).filter(
-    (entry) =>
-      entry.minigames.includes(
-        `Whack-a-Mole ${configData.minigames.whackamole1}`
-      ) && entry.malId
-  );
-  const challenges2 = Object.values(challengeDetails).filter(
-    (entry) =>
-      entry.minigames.includes(
-        `Whack-a-Mole ${configData.minigames.whackamole2}`
-      ) && entry.malId
-  );
-  const challenges3 = Object.values(challengeDetails).filter(
-    (entry) =>
-      entry.minigames.includes(
-        `Whack-a-Mole ${configData.minigames.whackamole3}`
-      ) && entry.malId
-  );
-
-  return replaceTemplates(whackamoleText, {
-    whackamoleRestrictions:
-      configData.minigames.whackamoleRestrictions.join(', '),
-    whackamole1Name: names[configData.minigames.whackamole1],
-    whackamole1Restrictions:
-      configData.minigames.whackamole1Restrictions.join(', '),
-    whackamole1Quests: challenges
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-    whackamole2Name: names[configData.minigames.whackamole2],
-    whackamole2Restrictions:
-      configData.minigames.whackamole2Restrictions.join(', '),
-    whackamole2Quests: challenges2
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-    whackamole3Name: names[configData.minigames.whackamole3],
-    whackamole3Restrictions:
-      configData.minigames.whackamole3Restrictions.join(', '),
-    whackamole3Quests: challenges3
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-  });
-}
-
-function generateTarot(
-  challengeDetails: ChallengeData,
-  configData: ConfigData
-) {
-  const ending: Record<string, string> = {
-    '2.1': '1',
-    '2.2': '2',
-    '3.1': '3',
-    '3.2': '4',
-  };
-
-  const [routeB] = configData.minigames.tarotEnding.split('.');
-
-  const challenges = Object.values(challengeDetails).filter(
-    (entry) => entry.minigames.includes('Tarot Route 1') && entry.malId
-  );
-  const challenges2 = Object.values(challengeDetails).filter(
-    (entry) => entry.minigames.includes(`Tarot Route ${routeB}`) && entry.malId
-  );
-  const challenges3 = Object.values(challengeDetails).filter(
-    (entry) =>
-      entry.minigames.includes(
-        `Tarot Route ${configData.minigames.tarotEnding}`
-      ) && entry.malId
-  );
-
-  return replaceTemplates(tarotText, {
-    tarotEnding: ending[configData.minigames.tarotEnding],
-    tarotRouteBName: `ROUTE ${routeB}: ${routeB === '2' ? 'CHOOSING TAROT CARDS' : 'CHOOSING CRYSTAL BALL'}`,
-    tarotRouteCName: `ROUTE ${configData.minigames.tarotEnding}: ${
-      {
-        '2.1': 'LEAVE THE CARD ALONE',
-        '2.2': 'FLIP THE CARD OVER',
-        '3.1': 'STAYING SAFE',
-        '3.2': 'BECOMING SUCCESSFUL',
-      }[configData.minigames.tarotEnding]
-    }`,
-    tarotRouteA: challenges
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-    tarotRouteB: challenges2
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-    tarotRouteC: challenges3
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
-        })
-      )
-      .join('\n\n'),
-  });
-}
-
-function generateDuckpond(
-  challengeDetails: ChallengeData,
-  configData: ConfigData
-) {
-  const challenges = Object.values(challengeDetails).filter(
-    (entry) => entry.minigames.includes('Duck Pond') && entry.malId
-  );
-
-  return replaceTemplates(duckpondText, {
-    duckpond: challenges
-      .map((challenge) =>
-        formatEntry({
-          anime: challenge.animeData,
-          challenge,
-          legend: configData.legend,
+          extraInfoColor: COURSE_COLORS[course],
+          course: courseItem,
         })
       )
       .join('\n\n'),

@@ -2,19 +2,20 @@ import { Typography } from '@mui/material';
 import { StatsProps } from './types';
 import {
   getEnabledChallenges,
-  getEnabledMinigames,
-  MINIGAME_DATA,
+  getEnabledCourses,
+  COURSE_DATA,
 } from '../challenges/data/data';
 import StatsProgressBar from './StatsProgressBar';
+import { CourseItem } from '../../types';
 
 const Stats = (props: StatsProps) => {
   const getAnimeList = () =>
     Object.values(
-      getEnabledChallenges(props.configData.minigames, props.challengeData)
+      getEnabledChallenges(props.configData.courses, props.challengeData)
     ).filter((c) => c.malId);
 
-  const getAnimeListForMinigame = (minigame: string) =>
-    getAnimeList().filter((c) => c.minigames.includes(minigame));
+  const getAnimeListForCourse = (course: string) =>
+    getAnimeList().filter((c) => c.courses.includes(course));
 
   return (
     <div className="stats">
@@ -40,9 +41,12 @@ const Stats = (props: StatsProps) => {
       <Typography variant="h5">Progress</Typography>
       <Typography variant="h6">
         Overall - Required Challenges:{' '}
-        {Object.entries(getEnabledMinigames(props.configData.minigames)).reduce(
-          (acc, [minigame, enabled]) =>
-            acc + (enabled ? MINIGAME_DATA[minigame].required : 0),
+        {Object.entries(getEnabledCourses(props.configData.courses)).reduce(
+          (acc, [course, enabled]) =>
+            acc +
+            (enabled
+              ? COURSE_DATA[course as CourseItem].requiredChallenges
+              : 0),
           0
         )}
       </Typography>
@@ -57,30 +61,30 @@ const Stats = (props: StatsProps) => {
           return acc + (challenge.endDate ? 1 : 0);
         }, 0)}
         required={Object.entries(
-          getEnabledMinigames(props.configData.minigames)
+          getEnabledCourses(props.configData.courses)
         ).reduce(
-          (acc, [minigame, enabled]) =>
-            acc + (enabled ? MINIGAME_DATA[minigame].required : 0),
+          (acc, [course, enabled]) =>
+            acc +
+            (enabled
+              ? COURSE_DATA[course as CourseItem].requiredChallenges
+              : 0),
           0
         )}
       />
-      {Object.entries(getEnabledMinigames(props.configData.minigames)).map(
-        ([minigame, enabled]) => {
+      {Object.entries(getEnabledCourses(props.configData.courses)).map(
+        ([course, enabled]) => {
           return (
-            <div key={minigame} hidden={!enabled}>
-              <Typography key={`${minigame}-label`} variant="h6">
-                {minigame} - Required Challenges:{' '}
-                {MINIGAME_DATA[minigame].required}
+            <div key={course} hidden={!enabled}>
+              <Typography key={`${course}-label`} variant="h6">
+                {course} - Required Challenges:{' '}
+                {COURSE_DATA[course as CourseItem].requiredChallenges}
               </Typography>
               <StatsProgressBar
-                key={`${minigame}-progress-bar`}
-                ptw={getAnimeListForMinigame(minigame).reduce(
-                  (acc, challenge) => {
-                    return acc + (!challenge.startDate ? 1 : 0);
-                  },
-                  0
-                )}
-                watching={getAnimeListForMinigame(minigame).reduce(
+                key={`${course}-progress-bar`}
+                ptw={getAnimeListForCourse(course).reduce((acc, challenge) => {
+                  return acc + (!challenge.startDate ? 1 : 0);
+                }, 0)}
+                watching={getAnimeListForCourse(course).reduce(
                   (acc, challenge) => {
                     return (
                       acc + (challenge.startDate && !challenge.endDate ? 1 : 0)
@@ -88,13 +92,13 @@ const Stats = (props: StatsProps) => {
                   },
                   0
                 )}
-                complete={getAnimeListForMinigame(minigame).reduce(
+                complete={getAnimeListForCourse(course).reduce(
                   (acc, challenge) => {
                     return acc + (challenge.endDate ? 1 : 0);
                   },
                   0
                 )}
-                required={MINIGAME_DATA[minigame].required}
+                required={COURSE_DATA[course as CourseItem].requiredChallenges}
               />
             </div>
           );

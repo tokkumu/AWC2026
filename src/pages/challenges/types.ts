@@ -1,10 +1,22 @@
 import { Dispatch, SetStateAction } from 'react';
 import { ConfigData } from '../config/types';
-import { AnimeDetails } from '../../types';
+import { AnimeDetails, CourseItem } from '../../types';
 
 export interface SidebarProps {
-  minigames: { [key: string]: boolean };
-  setCurrentMinigame: Dispatch<SetStateAction<string>>;
+  courses: Record<CourseItem, boolean>;
+  setCurrentCourse: Dispatch<SetStateAction<CourseItem>>;
+}
+
+export interface ExtraInfo {
+  key: string;
+  value: string;
+  required: boolean;
+  courses?: CourseItem[];
+}
+
+export interface ManualValidator {
+  valid: boolean;
+  courses?: CourseItem[];
 }
 
 export interface ChallengeEntry {
@@ -12,8 +24,9 @@ export interface ChallengeEntry {
   malId: string;
   startDate: string;
   endDate: string;
-  extraInfo: string;
-  minigames: string[];
+  extraInfo: ExtraInfo[];
+  manualValidators: { [hash: number]: ManualValidator };
+  courses: CourseItem[];
   animeData?: AnimeDetails;
 }
 
@@ -21,8 +34,8 @@ export interface ChallengeData {
   [challengeId: string]: ChallengeEntry;
 }
 
-export interface MinigameProps {
-  currentMinigame: string;
+export interface CourseProps {
+  currentCourse: CourseItem;
   challengeData: ChallengeData;
   setChallengeData: Dispatch<SetStateAction<ChallengeData>>;
   config: ConfigData;

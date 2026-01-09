@@ -27,6 +27,10 @@ export async function loadAnime(
     await fetch(`https://api.jikan.moe/v4/anime/${malId}/characters`)
   ).json();
 
+  const statisticsData = (await (
+    await fetch(`https://api.jikan.moe/v4/anime/${malId}/statistics`)
+  ).json()) as { data: Record<string, number> };
+
   if (!data) {
     return;
   }
@@ -55,6 +59,9 @@ export async function loadAnime(
     favorites: data.favorites,
     season: data.season,
     year: data.season_year,
+    producers: data.producers.map((g: { name: string }) => g.name),
+    licensors: data.licensors.map((g: { name: string }) => g.name),
+    studios: data.studios.map((g: { name: string }) => g.name),
     genres: data.genres.map((g: { name: string }) => g.name),
     themes: data.themes.map((t: { name: string }) => t.name),
     demographics: data.demographics.map((d: { name: string }) => d.name),
@@ -66,5 +73,12 @@ export async function loadAnime(
     supportingCharacters: charactersData.data.filter(
       (c: { role: string }) => c.role === 'Supporting'
     ).length,
+    statistics: {
+      watching: statisticsData.data.watching,
+      completed: statisticsData.data.completed,
+      onHold: statisticsData.data.on_hold,
+      ptw: statisticsData.data.plan_to_watch,
+      dropped: statisticsData.data.dropped,
+    },
   };
 }

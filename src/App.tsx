@@ -4,11 +4,15 @@ import Config from './pages/config/Config';
 import Challenges from './pages/challenges/Challenges';
 import { ConfigData } from './pages/config/types';
 import { ChallengeData } from './pages/challenges/types';
-import { generateChallengeData } from './pages/challenges/data/data';
+import {
+  generateChallengeData,
+  generateCourseValidatorInfo,
+} from './pages/challenges/data/data';
 import Settings from './pages/settings/Settings';
 import Stats from './pages/stats/Stats';
 import ReactGA from 'react-ga4';
 import Import from './pages/import/Import';
+import { Drink, Starter, Main, Side, Dessert } from './types';
 
 ReactGA.initialize('GT-KDTSJ7PP');
 
@@ -23,7 +27,7 @@ const App: React.FC = () => {
     Settings: 'Settings',
   };
 
-  const savedConfigData = localStorage.getItem('configData');
+  const savedConfigData = localStorage.getItem('configData2026');
   const [configData, setConfigData] = useState<ConfigData>(
     savedConfigData
       ? JSON.parse(savedConfigData)
@@ -38,32 +42,37 @@ const App: React.FC = () => {
             watching: 'MEDIUMPURPLE',
             completed: 'SEAGREEN',
           },
-          minigames: {
-            darts: false,
-            bingo: false,
-            bingo17: '17A',
-            bingo21: '21A',
-            plinko: false,
-            whackamole: false,
-            whackamoleRestrictions: [],
-            whackamole1: 'A',
-            whackamole1Restrictions: [],
-            whackamole2: 'B',
-            whackamole2Restrictions: [],
-            whackamole3: 'C',
-            whackamole3Restrictions: [],
-            tarot: false,
-            tarotEnding: '2.1',
-            duckpond: false,
+          courses: {
+            drink: {
+              enabled: false,
+              value: Drink.Coffee,
+            },
+            starter: {
+              enabled: false,
+              value: Starter.Soup,
+            },
+            main: {
+              enabled: false,
+              value: Main.Burger,
+            },
+            side: {
+              enabled: false,
+              value: Side.Fries,
+            },
+            dessert: {
+              enabled: false,
+              value: Dessert.Cake,
+            },
           },
+          courseValidatorInfo: generateCourseValidatorInfo(),
         }
   );
 
   useEffect(() => {
-    localStorage.setItem('configData', JSON.stringify(configData));
+    localStorage.setItem('configData2026', JSON.stringify(configData));
   }, [configData]);
 
-  const savedChallengeData = localStorage.getItem('challengeData');
+  const savedChallengeData = localStorage.getItem('challengeData2026');
   const [challengeData, setChallengeData] = useState<ChallengeData>(
     savedChallengeData
       ? JSON.parse(savedChallengeData)
@@ -71,7 +80,7 @@ const App: React.FC = () => {
   );
 
   useEffect(() => {
-    localStorage.setItem('challengeData', JSON.stringify(challengeData));
+    localStorage.setItem('challengeData2026', JSON.stringify(challengeData));
   }, [challengeData]);
 
   const handlePageClick = (page: string): void => {

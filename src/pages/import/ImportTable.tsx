@@ -94,7 +94,7 @@ const ImportTable = (props: ImportTableProps) => {
         .replace(/\W/g, '')
         .includes(textFilter.toLowerCase());
     const validDate =
-      r.my_start_date.startsWith('2025-') ||
+      r.my_start_date.startsWith('2026-') ||
       (r.my_start_date === '0000-00-00' && r.my_status === 'Plan to Watch');
     return (
       unusedOnlyMatch && typeMatch && statusMatch && textMatch && validDate

@@ -6,12 +6,15 @@ type ConfigProgressBarProps = {
 
 const ConfigProgressBar = ({ progress }: ConfigProgressBarProps) => {
   const levels = [
-    { value: 25, label: 'Level 1', color: '#9ED450' },
-    { value: 45, label: 'Level 2', color: '#FFB400' },
-    { value: 60, label: 'Level 3', color: '#D44343' },
-    { value: 75, label: 'Level 4', color: '#4BB1DF' },
-    { value: 100, label: 'Level 5', color: '#9068D4' },
+    { value: 15, label: 'Level 1', color: '#916247' },
+    { value: 30, label: 'Level 2', color: '#CA5C2B' },
+    { value: 45, label: 'Level 3', color: '#943126' },
+    { value: 60, label: 'Level 4', color: '#5B2C6F' },
+    { value: 75, label: 'Level 5', color: '#3B6C4C' },
   ];
+  const MAX_VALUE = 75;
+
+  const calcPercent = (v: number) => (100 * v) / MAX_VALUE;
 
   return (
     <div className="config-progress-bar-container">
@@ -32,8 +35,8 @@ const ConfigProgressBar = ({ progress }: ConfigProgressBarProps) => {
               key={level.value}
               className="config-progress-bar-section"
               style={{
-                left: `${previousValue}%`,
-                width: `${width}%`,
+                left: `${calcPercent(previousValue)}%`,
+                width: `${calcPercent(width)}%`,
                 backgroundColor: level.color,
               }}
             />
@@ -47,12 +50,12 @@ const ConfigProgressBar = ({ progress }: ConfigProgressBarProps) => {
             key={level.value}
             className={`config-level-label ${progress >= level.value ? 'active' : ''}`}
             style={{
-              left: `calc(${level.value}% - 30px)`,
+              left: `calc(${calcPercent(level.value)}% - 30px)`,
               color: level.color,
             }}
           >
             <span>{level.label}</span>
-            <span>{level.value} Tickets</span>
+            <span>{level.value} Items</span>
           </div>
         ))}
       </div>
@@ -62,7 +65,7 @@ const ConfigProgressBar = ({ progress }: ConfigProgressBarProps) => {
           <div
             key={level.value}
             className="config-progress-line"
-            style={{ left: `${level.value}%` }}
+            style={{ left: `${calcPercent(level.value)}%` }}
           />
         ))}
       </div>

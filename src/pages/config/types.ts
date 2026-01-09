@@ -1,3 +1,10 @@
+import { CourseItem } from '../../types';
+
+export interface CourseConfigItem {
+  enabled?: boolean;
+  value: CourseItem;
+}
+
 export interface ConfigData {
   username: string;
   completedAnime: string;
@@ -9,24 +16,12 @@ export interface ConfigData {
     watching: string;
     completed: string;
   };
-  minigames: {
-    darts: boolean;
-    bingo: boolean;
-    bingo17: '17A' | '17B';
-    bingo21: '21A' | '21B';
-    plinko: boolean;
-    whackamole: boolean;
-    whackamoleRestrictions: string[];
-    exaltedRestriction: string;
-    supremeRestriction: string;
-    whackamole1: 'A' | 'B' | 'C' | 'D' | 'E';
-    whackamole1Restrictions: string[];
-    whackamole2: 'A' | 'B' | 'C' | 'D' | 'E';
-    whackamole2Restrictions: string[];
-    whackamole3: 'A' | 'B' | 'C' | 'D' | 'E';
-    whackamole3Restrictions: string[];
-    tarot: boolean;
-    tarotEnding: '2.1' | '2.2' | '3.1' | '3.2';
-    duckpond: boolean;
+  courses: {
+    drink: CourseConfigItem;
+    starter: CourseConfigItem;
+    main: CourseConfigItem;
+    side: CourseConfigItem;
+    dessert: CourseConfigItem;
   };
+  courseValidatorInfo: Record<CourseItem, Record<string, string>>;
 }

@@ -1,10 +1,22 @@
+import {
+  CourseItem,
+  Drink,
+  Starter,
+  Main,
+  Side,
+  COURSE_VALUES,
+  Dessert,
+} from '../../../types';
 import { ConfigData } from '../../config/types';
-import { ChallengeData } from '../types';
-import { STACK_78, STACK_79, STACK_80 } from './stacks';
-import { ChallengeList } from './types';
+import { ChallengeData, ManualValidator } from '../types';
+import { ChallengeList, CourseData } from './types';
+import stringHash from 'string-hash';
+import range from 'lodash/range';
 import {
   validateAirTime,
   validateBroadcastDate,
+  validateCompany,
+  validateCompanyStartsWith,
   validateEpisodeCount,
   validateEpisodeDuration,
   validateFavorites,
@@ -14,213 +26,511 @@ import {
   validateMainCharacterCountEquals,
   validateMALIdContains,
   validateMoreMainThanSupporting,
+  validateTitleNonAlphanumericCount,
   validatePopularity,
   validateRankingPopularityDiff,
   validateRating,
   validateRuntime,
   validateScore,
+  validateScoreContains,
   validateSongCountAtLeast,
   validateSongCountEquals,
   validateSource,
-  validateStack,
   validateStartDate,
   validateStartMonth,
+  validateStatistics,
+  validateStudioProducerStartInUsername,
   validateTags,
+  validateTitleStartsWith,
   validateTitleUsername,
   validateType,
   validateWordsWithSameLetter,
+  validateTitleUsernameShareCount,
+  cvalidateBroadcastDate,
+  cvalidateCompany,
+  cvalidateDemographic,
+  cvalidateStartMonth,
+  cvalidateSeason,
+  cvalidateEpisodeCount,
+  cvalidateGenreTheme,
+  cvalidateStartYear,
+  cvalidateType,
+  cvalidateStartsWith,
 } from './validators';
 
-export const MINIGAME_DATA: { [id: string]: { required: number } } = {
-  Darts: {
-    required: 10,
+export const COURSE_DATA: CourseData = {
+  [Drink.Coffee]: {
+    label: 'AIRED SAME DAY',
+    requiredChallenges: 5,
+    extraInfo: [],
+    validators: [cvalidateBroadcastDate(Drink.Coffee)],
+    manualValidators: [],
+    courseValidatorInfo: [
+      {
+        name: 'Day',
+        type: 'select',
+        values: range(1, 32).map((n) => n.toString()),
+      },
+    ],
   },
-  'Bingo 17A': {
-    required: 14,
+  [Drink.Tea]: {
+    label: 'MAL/ANIME+ RECS',
+    requiredChallenges: 5,
+    extraInfo: ['MAL/Anime+ Screenshot:'],
+    validators: [],
+    manualValidators: ['Anime recommended by MAL or Anime+'],
   },
-  'Bingo 17B': {
-    required: 14,
+  [Drink.Soda]: {
+    label: 'SAME LICENSOR/PRODUCER/STUDIO',
+    requiredChallenges: 5,
+    extraInfo: [],
+    validators: [cvalidateCompany(Drink.Soda)],
+    manualValidators: [],
+    courseValidatorInfo: [{ name: 'Licensor/Producor/Studio', type: 'text' }],
   },
-  'Bingo 21A': {
-    required: 16,
+  [Drink.Lemonade]: {
+    label: 'TITLE 5+ WORDS',
+    requiredChallenges: 5,
+    extraInfo: [],
+    validators: [],
+    manualValidators: ['Anime title has >=5 words'],
   },
-  'Bingo 21B': {
-    required: 16,
+  [Starter.Soup]: {
+    label: 'SAME DEMOGRAPHIC',
+    requiredChallenges: 20,
+    extraInfo: [],
+    validators: [cvalidateDemographic(Starter.Soup)],
+    manualValidators: [],
+    courseValidatorInfo: [
+      {
+        name: 'Demographic',
+        type: 'select',
+        values: ['Josei', 'Kids', 'Seinen', 'Shoujo', 'Shounen'],
+      },
+    ],
   },
-  'Plinko Tier 1': {
-    required: 5,
+  [Starter.Salad]: {
+    label: 'MEAN SCORE 7.50 OR LESS',
+    requiredChallenges: 20,
+    extraInfo: [],
+    validators: [validateScore(7.5, 'lte')],
+    manualValidators: [],
   },
-  'Plinko Tier 2': {
-    required: 5,
+  [Starter.Gyoza]: {
+    label: 'EPISODE DURATION OF 23 MINS OR MORE',
+    requiredChallenges: 20,
+    extraInfo: [],
+    validators: [validateEpisodeDuration(23, 'gte')],
+    manualValidators: [],
   },
-  'Plinko Tier 3': {
-    required: 5,
+  [Starter.SpringRolls]: {
+    label: 'AIRED IN SAME MONTH',
+    requiredChallenges: 20,
+    extraInfo: [],
+    validators: [cvalidateStartMonth(Starter.SpringRolls)],
+    manualValidators: [],
+    courseValidatorInfo: [
+      {
+        name: 'Month',
+        type: 'select',
+        values: range(1, 13).map((n) => n.toString()),
+      },
+    ],
   },
-  'Whack-a-Mole A': {
-    required: 5,
+  [Starter.Prawns]: {
+    label: 'STARTED AIRING BETWEEN 2000 AND 2009',
+    requiredChallenges: 20,
+    extraInfo: [],
+    validators: [
+      validateStartDate('2000-01-01', 'gte'),
+      validateStartDate('2009-12-31', 'lte'),
+    ],
+    manualValidators: [],
   },
-  'Whack-a-Mole B': {
-    required: 5,
+  [Starter.ChickenWings]: {
+    label: 'TV-TYPE ONLY',
+    requiredChallenges: 20,
+    extraInfo: [],
+    validators: [validateType(['TV'])],
+    manualValidators: [],
   },
-  'Whack-a-Mole C': {
-    required: 5,
+  [Main.Burger]: {
+    label: 'MEAN SCORE OF 7.00 OR GREATER',
+    requiredChallenges: 25,
+    extraInfo: [],
+    validators: [validateScore(7.0, 'gte')],
+    manualValidators: [],
   },
-  'Whack-a-Mole D': {
-    required: 5,
+  [Main.Sushi]: {
+    label: 'NON-ALPHANUMERIC CHARACTER IN MAIN TITLE',
+    requiredChallenges: 25,
+    extraInfo: [],
+    validators: [validateTitleNonAlphanumericCount(1, 'gte')],
+    manualValidators: [],
   },
-  'Whack-a-Mole E': {
-    required: 5,
+  [Main.Spaghetti]: {
+    label: 'PG-13 RATING',
+    requiredChallenges: 25,
+    extraInfo: [],
+    validators: [validateRating(['PG-13 - Teens 13 or older'])],
+    manualValidators: [],
   },
-  'Tarot Route 1': {
-    required: 3,
+  [Main.Pizza]: {
+    label: '3+ HOURS WATCH TIME',
+    requiredChallenges: 25,
+    extraInfo: [],
+    validators: [validateRuntime(180, 'gte')],
+    manualValidators: [],
   },
-  'Tarot Route 2': {
-    required: 6,
+  [Main.Lasagna]: {
+    label: 'STARTED AIRING SAME SEASON',
+    requiredChallenges: 25,
+    extraInfo: [],
+    validators: [cvalidateSeason(Main.Lasagna)],
+    manualValidators: [],
+    courseValidatorInfo: [
+      {
+        name: 'Season',
+        type: 'select',
+        values: ['Winter', 'Spring', 'Summer', 'Fall'],
+      },
+    ],
   },
-  'Tarot Route 2.1': {
-    required: 6,
+  [Main.Sandwich]: {
+    label: 'SAME NUMBER OF EPISODES',
+    requiredChallenges: 25,
+    extraInfo: [],
+    validators: [cvalidateEpisodeCount(Main.Sandwich)],
+    manualValidators: [],
+    courseValidatorInfo: [{ name: 'Number of Epidodes', type: 'text' }],
   },
-  'Tarot Route 2.2': {
-    required: 6,
+  [Main.Omurice]: {
+    label: 'STARTED AIRING BETWEEN 2021 and 2026',
+    requiredChallenges: 25,
+    extraInfo: [],
+    validators: [
+      validateStartDate('2021-01-01', 'gte'),
+      validateStartDate('2026-12-10', 'lte'),
+    ],
+    manualValidators: [],
   },
-  'Tarot Route 3': {
-    required: 6,
+  [Main.FishAndChips]: {
+    label: 'SHARED GENRE/THEME',
+    requiredChallenges: 25,
+    extraInfo: [],
+    validators: [cvalidateGenreTheme(Main.FishAndChips)],
+    manualValidators: [],
+    courseValidatorInfo: [
+      { name: 'Genre/Theme #1', type: 'text' },
+      { name: 'Genre/Theme #2', type: 'text' },
+    ],
   },
-  'Tarot Route 3.1': {
-    required: 6,
+  [Side.Fries]: {
+    label: 'SHARED STAFF',
+    requiredChallenges: 15,
+    extraInfo: [],
+    validators: [],
+    manualValidators: ['Anime shares a staff member with other sides'],
+    courseValidatorInfo: [
+      { name: 'Staff #1', type: 'text' },
+      { name: 'Staff #2', type: 'text' },
+    ],
   },
-  'Tarot Route 3.2': {
-    required: 6,
+  [Side.Onigiri]: {
+    label: '15 MINUTE OR LESS EPISODES',
+    requiredChallenges: 15,
+    extraInfo: [],
+    validators: [validateEpisodeDuration(15, 'lte')],
+    manualValidators: [],
   },
-  'Duck Pond': {
-    required: 15,
+  [Side.OnionRings]: {
+    label: 'SHIRITORI CHAIN',
+    requiredChallenges: 15,
+    extraInfo: [],
+    validators: [],
+    manualValidators: ['Anime valid for shiritori chain'],
+  },
+  [Side.GarlicBread]: {
+    label: 'R-17/R+/Rx RATING',
+    requiredChallenges: 15,
+    extraInfo: [],
+    validators: [
+      validateRating([
+        'R - 17+ (violence & profanity)',
+        'R+ - Mild Nudity',
+        'Rx - Hentai',
+      ]),
+    ],
+    manualValidators: [],
+  },
+  [Side.TheMelon]: {
+    label: 'STARTED AIRING BETWEEN 2011 AND 2020',
+    requiredChallenges: 15,
+    extraInfo: [],
+    validators: [
+      validateStartDate('2011-01-01', 'gte'),
+      validateStartDate('2020-12-31', 'lte'),
+    ],
+    manualValidators: [],
+  },
+  [Side.Tofu]: {
+    label: 'MOVIES ONLY',
+    requiredChallenges: 15,
+    extraInfo: [],
+    validators: [validateType(['Movie'])],
+    manualValidators: [],
+  },
+  [Dessert.Cake]: {
+    label: 'STARTED AIRING SAME YEAR',
+    requiredChallenges: 10,
+    extraInfo: [],
+    validators: [cvalidateStartYear(Dessert.Cake)],
+    manualValidators: [],
+    courseValidatorInfo: [
+      { name: 'Year #1', type: 'text' },
+      { name: 'Year #2', type: 'text' },
+    ],
+  },
+  [Dessert.IceCream]: {
+    label: 'SAME TYPE',
+    requiredChallenges: 10,
+    extraInfo: [],
+    validators: [cvalidateType(Dessert.IceCream)],
+    manualValidators: [],
+    courseValidatorInfo: [
+      {
+        name: 'Type',
+        type: 'select',
+        values: [
+          'TV',
+          'OVA',
+          'Movie',
+          'Special',
+          'ONA',
+          'Music',
+          'TV Special',
+          'PV',
+          'CM',
+        ],
+      },
+    ],
+  },
+  [Dessert.Cookie]: {
+    label: 'MAIN TITLE 5 WORDS OR LESS',
+    requiredChallenges: 10,
+    extraInfo: [],
+    validators: [],
+    manualValidators: ['Anime title has <=5 words'],
+  },
+  [Dessert.ApplePie]: {
+    label: 'MAIN TITLE STARTS WITH SAME LETTER',
+    requiredChallenges: 10,
+    extraInfo: [],
+    validators: [cvalidateStartsWith(Dessert.ApplePie)],
+    manualValidators: [],
+    courseValidatorInfo: [
+      {
+        name: 'Letter',
+        type: 'select',
+        values: [
+          ...String.fromCharCode(...range(65, 91)).split(''),
+          ...range(10).map((n) => n.toString()),
+          'Other',
+        ],
+      },
+    ],
+  },
+  [Dessert.Milkshake]: {
+    label: 'MC WITH UNNATURAL HAIR COLOR',
+    requiredChallenges: 10,
+    extraInfo: [],
+    validators: [],
+    manualValidators: [
+      'Anime has main character with blue, green, pink, or purple hair',
+    ],
+  },
+  [Dessert.Dango]: {
+    label: 'STARTED AIRING 1999 OR EARLIER',
+    requiredChallenges: 10,
+    extraInfo: [],
+    validators: [validateStartDate('1999-12-31', 'lte')],
+    manualValidators: [],
   },
 };
 
 export const CHALLENGE_LIST: ChallengeList = {
   '1': {
-    bbCode: `(1) Watch an anime an active [url=https://myanimelist.net/forum/?topicid=1867298#msg60815692][color=#4BB1DF][b]MAL Staff Member[/b][/color][/url] has listed in their '[url=https://i.imgur.com/H3AydsD.png][color=#9068D4][b]Popularity vs Anime Score[/b][/color][/url]' profile statistics and provide a screenshot (AWC Staff are not MAL Staff)`,
-    description: `(1) Watch an anime an active <a href="https://myanimelist.net/forum/?topicid=1867298#msg60815692">MAL Staff Member</a> has listed in their '<a href="https://i.imgur.com/H3AydsD.png">Popularity vs Anime Score</a>' profile statistics and provide a screenshot (AWC Staff are not MAL Staff)`,
+    bbCode:
+      "(1) Watch an anime an active [url=https://myanimelist.net/forum/?topicid=1867298#msg60815692][b]MAL Staff Member[/b][/url] (not AWC Staff) has listed in their 'MAL Score vs Anime Score' profile statistics",
+    description:
+      '(1) Watch an anime an active <a href="https://myanimelist.net/forum/?topicid=1867298#msg60815692">MAL Staff Member</a> (not AWC Staff) has listed in their \'MAL Score vs Anime Score\' profile statistics',
     addlInfo: [
-      `- On the MAL user's profile click "All Anime Stats" just above the anime Mean Score or click "Statistics" under the Joined date`,
+      '— On the MAL user\'s profile click "All Anime Stats" just above the anime Mean Score or click "Statistics" under the Joined date',
     ],
-    defaultExtraInfo: 'MAL Staff: | Screenshot: ',
-    minigames: ['Duck Pond'],
+    defaultExtraInfo: ['MAL Staff:', 'Screenshot:'],
+    courses: [Main.Burger, Main.Lasagna, Main.Pizza],
     validators: [],
+    manualValidators: [
+      "Active MAL staff member has anime listed in 'MAL Score vs Anime Score'",
+    ],
   },
   '2': {
     bbCode:
-      '(2) Watch an anime from a [url=https://myanimelist.net/forum/?topicid=1867298#msg68289129][color=#4BB1DF][b]Stack[/b][/color][/url] provided by an active AWC Staff Member (MAL Staff are not AWC Staff)',
+      '(2) Watch an anime from a [url=https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129][b]Stack[/b][/url] provided by an active AWC Staff Member',
     description:
-      '(2) Watch an anime from a <a href="https://myanimelist.net/forum/?topicid=1867298#msg68289129">Stack</a> provided by an active AWC Staff Member (MAL Staff are not AWC Staff)',
+      '(2) Watch an anime from a <a href="https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129">Stack</a> provided by an active AWC Staff Member',
     addlInfo: [],
-    defaultExtraInfo: 'AWC Staff Stack Used: ',
-    minigames: ['Darts'],
+    defaultExtraInfo: ['AWC Staff Stack:'],
+    courses: [Starter.ChickenWings, Starter.Gyoza],
     validators: [],
+    manualValidators: ['Anime in one of the listed stacks'],
   },
   '3': {
     bbCode:
-      '(3) Watch an anime completed by an [url=https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129][color=#4BB1DF][b]AWC Staff Member[/b][/color][/url] (staff must have rated the anime at least an 8 and completed it before item is started)',
+      '(3) Watch an anime [u]after[/u] an [url=https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129][b]AWC Staff Member[/b][/url] has completed and rated it 8.00 or higher',
     description:
-      '(3) Watch an anime completed by an <a href="https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129">AWC Staff Member</a> (staff must have rated the anime at least an 8 and completed it before item is started)',
+      '(3) Watch an anime <u>after</u> an <a href="https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129">AWC Staff Member</a> has completed and rated it 8.00 or higher',
     addlInfo: [],
-    defaultExtraInfo: 'AWC Staff Member: ',
-    minigames: ['Tarot Route 2.1', 'Tarot Route 3.1', 'Tarot Route 3.2'],
+    defaultExtraInfo: ['AWC Staff:'],
+    courses: [
+      Main.Burger,
+      Main.FishAndChips,
+      Main.Omurice,
+      Main.Spaghetti,
+      Main.Sushi,
+    ],
     validators: [],
+    manualValidators: [
+      'Anime completed by AWC Staff Member prior to starting',
+      'Anime rated >= 8.00 by AWC Staff Member',
+    ],
   },
   '4': {
     bbCode:
-      '(4) Watch an anime recommended to you in the [url=https://myanimelist.net/forum/?topicid=2188282][color=#4BB1DF][b]AWC 2025 Staff Recs[/b][/color][/url] thread by an active [url=https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129][color=#4BB1DF][b]AWC Staff Member[/b][/color][/url]',
+      '(4) Watch an anime recommended to you in the [url=https://myanimelist.net/forum/?topicid=2237153][b]AWC 2026 Staff Recs[/b][/url] thread by an active [url=https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129][b]AWC Staff Member[/b][/url]',
     description:
-      '(4) Watch an anime recommended to you in the <a href="https://myanimelist.net/forum/?topicid=2188282">AWC 2025 Staff Recs</a> thread by an active <a href="https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129">AWC Staff Member</a>',
+      '(4) Watch an anime recommended to you in the <a href="https://myanimelist.net/forum/?topicid=2237153">AWC 2026 Staff Recs</a> thread by an active <a href="https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68289129">AWC Staff Member</a>',
     addlInfo: [],
-    defaultExtraInfo: 'Recommendation Link: ',
-    minigames: ['Bingo 21A', 'Bingo 21B'],
+    defaultExtraInfo: ['Staff Rec Link:'],
+    courses: [Dessert.ApplePie, Dessert.IceCream, Dessert.Milkshake],
     validators: [],
+    manualValidators: ['Anime recommended to you in AWC 2026 Staff Recs'],
   },
   '5': {
     bbCode:
-      '(5) Watch an anime recommended to you in the [url=https://myanimelist.net/forum/?topicid=2188284][color=#4BB1DF][b]AWC 2025 Participant Recs[/b][/color][/url] thread',
+      '(5) Watch an anime recommended to you in the [url=https://myanimelist.net/forum/?topicid=2237155][b]AWC 2026 Participant Recs[/b][/url] thread',
     description:
-      '(5) Watch an anime recommended to you in the <a href="https://myanimelist.net/forum/?topicid=2188284">AWC 2025 Participant Recs</a> thread',
+      '(5) Watch an anime recommended to you in the <a href="https://myanimelist.net/forum/?topicid=2237155">AWC 2026 Participant Recs</a> thread',
     addlInfo: [],
-    defaultExtraInfo: 'Recommendation Link: ',
-    minigames: ['Whack-a-Mole B'],
+    defaultExtraInfo: ['Participant Rec Link:'],
+    courses: [Side.GarlicBread, Side.Onigiri, Side.TheMelon, Side.Tofu],
     validators: [],
+    manualValidators: ['Anime recommended to you in AWC 2026 Participant Recs'],
   },
   '6': {
     bbCode:
-      '(6) Watch an anime completed by a 2025 AWC participant who has a [url=https://myanimelist.net/forum/?topicid=2196122][color=#4BB1DF][b]sign-up post[/b][/color][/url] on page 1-3 (participant must have rated the anime a 9 or 10 and completed it before item is started)',
+      '(6) Watch an anime [u]after[/u] a 2026 participant with a [url=https://myanimelist.net/forum/?topicid=2245806][b]sign-up post[/b][/url] on page 1-3 completed and rated it 9.00 or higher',
     description:
-      '(6) Watch an anime completed by a 2025 AWC participant who has a <a href="https://myanimelist.net/forum/?topicid=2196122">sign-up post</a> on page 1-3 (participant must have rated the anime a 9 or 10 and completed it before item is started)',
+      '(6) Watch an anime <u>after</u> a 2026 participant with a <a href="https://myanimelist.net/forum/?topicid=2245806">sign-up post</a> on page 1-3 completed and rated it 9.00 or higher',
     addlInfo: [],
-    defaultExtraInfo: 'AWC Participant: | Post Link: | Screenshot: ',
-    minigames: ['Plinko Tier 3'],
+    defaultExtraInfo: [
+      'Participant:',
+      'Link to Their Post:',
+      'Link to Their Completed List:',
+    ],
+    courses: [Main.FishAndChips, Main.Lasagna, Main.Omurice, Main.Sandwich],
     validators: [],
+    manualValidators: [
+      'Anime completed by participant prior to starting',
+      'Anime rated >= 9.00 by participant',
+      'Participant on page 1-3 of the sign-up post',
+    ],
   },
   '7': {
     bbCode:
-      '(7) Watch an anime that a 2025 AWC participant has completed for the 2025 challenge (participant must have completed anime before item is started)',
+      '(7) Watch an anime [u]after[/u] a 2026 participant has completed it for the current challenge',
     description:
-      '(7) Watch an anime that a 2025 AWC participant has completed for the 2025 challenge (participant must have completed anime before item is started)',
+      '(7) Watch an anime <u>after</u> a 2026 participant has completed it for the current challenge',
     addlInfo: [],
-    defaultExtraInfo: 'AWC Participant: | Item Used For: | Post Link: ',
-    minigames: ['Duck Pond'],
+    defaultExtraInfo: ['Participant:', 'Item Used For:', 'Link to Their Post:'],
+    courses: [Side.GarlicBread, Side.Onigiri],
     validators: [],
+    manualValidators: ['Anime completed by participant prior to starting'],
   },
   '8': {
     bbCode:
-      '(8) Watch an anime a 2025 AWC participant [url=https://i.imgur.com/qW5Obtw.png][color=#9068D4][b]dropped[/b][/color][/url] or put [url=https://i.imgur.com/cGfhreB.png][color=#9068D4][b]on-hold[/b][/color][/url] September 30, 2024 or earlier (participant must have watched at least one episode)',
+      '(8) Watch an anime [u]after[/u] a 2026 participant watched 1 or more eps and dropped or put it on-hold September 30, 2025 or earlier',
     description:
-      '(8) Watch an anime a 2025 AWC participant <a href="https://i.imgur.com/qW5Obtw.png">dropped</a> or put <a href="https://i.imgur.com/cGfhreB.png">on-hold</a> September 30, 2024 or earlier (participant must have watched at least one episode)',
+      '(8) Watch an anime <u>after</u> a 2026 participant watched 1 or more eps and dropped or put it on-hold September 30, 2025 or earlier',
     addlInfo: [
-      '- If participant does not track Start/Finish dates, their Last Updated must show a date of September 30, 2024 or earlier',
-      '- You may <u>not</u> use your own list for this item',
+      '— If participant does not track Start/Finish dates, their Last Updated must show a date of September 30, 2025 or earlier',
     ],
-    defaultExtraInfo: 'AWC Participant: | Post Link: | Screenshot: ',
-    minigames: ['Bingo 17A', 'Bingo 17B'],
+    defaultExtraInfo: [
+      'AWC Participant:',
+      'Their Post Link:',
+      'Screenshot of Their Dropped/On-Hold:',
+    ],
+    courses: [
+      Starter.ChickenWings,
+      Starter.Gyoza,
+      Starter.Soup,
+      Starter.SpringRolls,
+    ],
     validators: [],
+    manualValidators: ['Anime dropped/put on-hold prior to September 30, 2025'],
   },
   '9': {
-    bbCode: `(9) Watch an anime featured in a 2025 AWC participant's forum [url=https://i.imgur.com/kXJlFdt.png][color=#9068D4][b]avatar or signature[/b][/color][/url]`,
-    description: `(9) Watch an anime featured in a 2025 AWC participant's forum <a href="https://i.imgur.com/kXJlFdt.png">avatar or signature</a>`,
+    bbCode:
+      "(9) Watch an anime featured in a 2026 participant's forum avatar or signature",
+    description:
+      "(9) Watch an anime featured in a 2026 participant's forum avatar or signature",
     addlInfo: [
-      '- The character in the avatar/signature must appear in the anime you choose to watch, not just the series in general',
+      '— The character in the avatar/signature must appear in the anime you choose to watch, not just the series in general',
     ],
-    defaultExtraInfo: 'AWC Participant: | Post Link: ',
-    minigames: ['Bingo 21A', 'Bingo 21B'],
+    defaultExtraInfo: ['Participant:', 'Link to Their Post:'],
+    courses: [Main.Burger, Main.Sushi],
     validators: [],
+    manualValidators: [
+      'Character from avatar or signature appears in the anime',
+    ],
   },
   '10': {
-    bbCode: `(10) Watch an anime a 2025 AWC participant has listed in their '[url=https://i.imgur.com/PUBpGRc.png][color=#9068D4][b]MAL Score vs Anime Score[/b][/color][/url]' profile statistics and provide a screenshot`,
-    description: `(10) Watch an anime a 2025 AWC participant has listed in their '<a href="https://i.imgur.com/PUBpGRc.png">MAL Score vs Anime Score</a>' profile statistics and provide a screenshot`,
+    bbCode:
+      "(10) Watch an anime a 2026 participant has listed in their 'Popularity vs Anime Score' profile statistics and provide a screenshot",
+    description:
+      "(10) Watch an anime a 2026 participant has listed in their 'Popularity vs Anime Score' profile statistics and provide a screenshot",
     addlInfo: [
-      `- On the MAL user's profile click "All Anime Stats" just above the anime Mean Score or click "Statistics" under the Joined date`,
+      '— On the MAL user\'s profile click "All Anime Stats" just above the anime Mean Score or click "Statistics" under the Joined date',
     ],
-    defaultExtraInfo:
-      'AWC Participant: | Post Link: | Profile Statistics Link: | Screenshot: ',
-    minigames: ['Tarot Route 2'],
+    defaultExtraInfo: ['Participant:', 'Their Post Link:', 'Screenshot:'],
+    courses: [Starter.ChickenWings],
     validators: [],
+    manualValidators: [
+      "Participant has anime listed in 'Popularity vs Anime Score'",
+    ],
   },
   '11': {
     bbCode:
-      '(11) Watch a TV-type anime with an episode duration of [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Episode%20Duration/TV%20type%20with%20episode%20duration%20of%2025min%20or%20more.txt][color=#4BB1DF][b]25 minutes[/b][/color][/url] or more',
+      '(11) Watch a TV-type anime with an episode duration of [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Episode%20Duration/TV%20type%20with%20episode%20duration%20of%2025min%20or%20more.txt][b]25 minutes[/b][/url] or more',
     description:
       '(11) Watch a TV-type anime with an episode duration of <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Episode%20Duration/TV%20type%20with%20episode%20duration%20of%2025min%20or%20more.txt">25 minutes</a> or more',
     addlInfo: [],
-    minigames: ['Whack-a-Mole A'],
+    defaultExtraInfo: [],
+    courses: [Main.Lasagna, Main.Pizza],
     validators: [validateType(['TV']), validateEpisodeDuration(25, 'gte')],
+    manualValidators: [],
   },
   '12': {
-    bbCode: '(12) Watch an ONA, OVA, or Special that has 10 episodes or more',
-    description:
-      '(12) Watch an ONA, OVA, or Special that has 10 episodes or more',
+    bbCode: '(12) Watch an ONA, OVA, or Special that has 10+ episodes',
+    description: '(12) Watch an ONA, OVA, or Special that has 10+ episodes',
     addlInfo: [],
-    minigames: ['Duck Pond'],
+    defaultExtraInfo: [],
+    courses: [Starter.Salad, Starter.Soup],
     validators: [
       validateType(['ONA', 'OVA', 'Special']),
       validateEpisodeCount(10, 'gte'),
     ],
+    manualValidators: [],
   },
   '13': {
     bbCode:
@@ -228,1321 +538,2211 @@ export const CHALLENGE_LIST: ChallengeList = {
     description:
       '(13) Watch a Movie with a total duration of 1 hour 30 minutes or more',
     addlInfo: [],
-    minigames: ['Plinko Tier 1'],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cake, Dessert.Cookie],
     validators: [validateType(['Movie']), validateRuntime(90, 'gte')],
+    manualValidators: [],
   },
   '14': {
     bbCode:
-      '(14) Watch a TV-type anime with an [url=https://i.imgur.com/AUlOSJY.png][color=#9068D4][b]irregular release schedule[/b][/color][/url] (where at least one episode was released less than 7 days after its previous episode or more than 7 days after its previous episode)',
+      '(14) Watch a TV-type anime with an irregular release schedule (an ep released more than/less than 7 days after its previous ep)',
     description:
-      '(14) Watch a TV-type anime with an <a href="https://i.imgur.com/AUlOSJY.png">irregular release schedule</a> (where at least one episode was released less than 7 days after its previous episode or more than 7 days after its previous episode)',
+      '(14) Watch a TV-type anime with an irregular release schedule (an ep released more than/less than 7 days after its previous ep)',
     addlInfo: [
-      "- If the episode air dates are not listed in the anime's Episodes tab, you must provide a reliable source of this information (AniDB, AnimeNewsNetwork, etc.)",
+      "— If the episode air dates are not listed in the anime's Episodes tab, you must provide a reliable source of this information (AniDB, AnimeNewsNetwork, etc.)",
     ],
-    minigames: ['Whack-a-Mole A'],
+    defaultExtraInfo: [],
+    courses: [Side.GarlicBread, Side.TheMelon],
     validators: [validateType(['TV'])],
+    manualValidators: ['Anime has an irregular release schedule'],
   },
   '15': {
-    bbCode:
-      '(15) Watch a TV-type anime with a [url=https://i.imgur.com/0WHKcHk.png][color=#9068D4][b]Sequel[/b][/color][/url] listed under Related Entries',
-    description:
-      '(15) Watch a TV-type anime with a <a href="https://i.imgur.com/0WHKcHk.png">Sequel</a> listed under Related Entries',
+    bbCode: '(15) Watch an anime with 2 to 6 episodes',
+    description: '(15) Watch an anime with 2 to 6 episodes',
     addlInfo: [],
-    minigames: ['Whack-a-Mole A'],
-    validators: [validateType(['TV'])],
+    defaultExtraInfo: [],
+    courses: [Side.Fries, Side.GarlicBread, Side.TheMelon],
+    validators: [
+      validateEpisodeCount(2, 'gte'),
+      validateEpisodeCount(6, 'lte'),
+    ],
+    manualValidators: [],
   },
   '16': {
-    bbCode:
-      '(16) Watch a Sequel (any anime type) to the anime used for Item (15)',
-    description:
-      '(16) Watch a Sequel (any anime type) to the anime used for Item (15)',
-    addlInfo: [
-      '- The pair can be watched in whatever order you want; sometimes a "prequel" airs after its "sequel"',
+    bbCode: '(16) Watch an anime with 10 or more episodes',
+    description: '(16) Watch an anime with 10 or more episodes',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [
+      Main.Burger,
+      Main.Lasagna,
+      Main.Omurice,
+      Main.Spaghetti,
+      Main.Sushi,
     ],
-    minigames: ['Whack-a-Mole A'],
-    validators: [],
+    validators: [validateEpisodeCount(10, 'gte')],
+    manualValidators: [],
   },
   '17': {
-    bbCode:
-      '(17) Watch an anime with 15 or more episodes (each episode must be less than 16 minutes)',
-    description:
-      '(17) Watch an anime with 15 or more episodes (each episode must be less than 16 minutes)',
+    bbCode: '(17) Watch an anime with 17 or more episodes',
+    description: '(17) Watch an anime with 17 or more episodes',
     addlInfo: [],
-    minigames: ['Plinko Tier 2'],
-    validators: [
-      validateEpisodeCount(15, 'gte'),
-      validateEpisodeDuration(15, 'lte'),
+    defaultExtraInfo: [],
+    courses: [
+      Main.Burger,
+      Main.FishAndChips,
+      Main.Lasagna,
+      Main.Omurice,
+      Main.Pizza,
     ],
+    validators: [validateEpisodeCount(17, 'gte')],
+    manualValidators: [],
   },
   '18': {
-    bbCode:
-      '(18) Watch an anime with 22 or more episodes (each episode must be at least 15 minutes)',
-    description:
-      '(18) Watch an anime with 22 or more episodes (each episode must be at least 15 minutes)',
+    bbCode: '(18) Watch an anime with 26 or more episodes',
+    description: '(18) Watch an anime with 26 or more episodes',
     addlInfo: [],
-    minigames: ['Darts'],
-    validators: [
-      validateEpisodeCount(22, 'gte'),
-      validateEpisodeDuration(15, 'gte'),
-    ],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cake, Dessert.Dango],
+    validators: [validateEpisodeCount(26, 'gte')],
+    manualValidators: [],
   },
   '19': {
-    bbCode:
-      '(19) Watch an anime with 43 or more episodes (each episode must be at least 15 minutes)',
-    description:
-      '(19) Watch an anime with 43 or more episodes (each episode must be at least 15 minutes)',
+    bbCode: '(19) Watch an anime with 40 or more episodes',
+    description: '(19) Watch an anime with 40 or more episodes',
     addlInfo: [],
-    minigames: ['Whack-a-Mole E'],
-    validators: [
-      validateEpisodeCount(43, 'gte'),
-      validateEpisodeDuration(15, 'gte'),
-    ],
+    defaultExtraInfo: [],
+    courses: [Starter.ChickenWings, Starter.Gyoza, Starter.Prawns],
+    validators: [validateEpisodeCount(40, 'gte')],
+    manualValidators: [],
   },
   '20': {
-    bbCode:
-      '(20) Watch an anime with 61 or more episodes (each episode must be at least 10 minutes)',
-    description:
-      '(20) Watch an anime with 61 or more episodes (each episode must be at least 10 minutes)',
+    bbCode: '(20) Watch an anime with 52 or more episodes',
+    description: '(20) Watch an anime with 52 or more episodes',
     addlInfo: [],
-    minigames: ['Bingo 21B'],
-    validators: [
-      validateEpisodeCount(61, 'gte'),
-      validateEpisodeDuration(10, 'gte'),
-    ],
+    defaultExtraInfo: [],
+    courses: [Starter.ChickenWings, Starter.Salad],
+    validators: [validateEpisodeCount(52, 'gte')],
+    manualValidators: [],
   },
   '21': {
     bbCode:
-      '(21) Watch an anime that began airing between Jan 1, 2020 and Dec 31, 2024 (total duration must be at least 16 minutes)',
+      '(21) Watch a TV-type anime with a direct Sequel listed under Related Entries',
     description:
-      '(21) Watch an anime that began airing between Jan 1, 2020 and Dec 31, 2024 (total duration must be at least 16 minutes)',
+      '(21) Watch a TV-type anime with a direct Sequel listed under Related Entries',
     addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateStartDate('2020-01-01', 'gte'),
-      validateStartDate('2024-12-31', 'lte'),
-    ],
+    defaultExtraInfo: [],
+    courses: [Main.FishAndChips, Main.Omurice, Main.Pizza, Main.Spaghetti],
+    validators: [validateType(['TV'])],
+    manualValidators: ['Sequel for this anime is used in item 22'],
   },
   '22': {
     bbCode:
-      '(22) Watch an anime that began airing between Jan 1, 2015 and Dec 31, 2019 (total duration must be at least 16 minutes)',
+      '(22) Watch a Sequel (any anime type) to the anime used for Item (21)',
     description:
-      '(22) Watch an anime that began airing between Jan 1, 2015 and Dec 31, 2019 (total duration must be at least 16 minutes)',
-    addlInfo: [],
-    minigames: ['Darts'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateStartDate('2015-01-01', 'gte'),
-      validateStartDate('2019-12-31', 'lte'),
+      '(22) Watch a Sequel (any anime type) to the anime used for Item (21)',
+    addlInfo: [
+      '— These can be watched in whatever order you want; sometimes a "prequel" airs after its "sequel"',
     ],
+    defaultExtraInfo: [],
+    courses: [Main.FishAndChips, Main.Omurice, Main.Pizza, Main.Spaghetti],
+    validators: [],
+    manualValidators: ['This anime is a sequel to the anime used in item 21'],
   },
   '23': {
     bbCode:
-      '(23) Watch an anime that began airing between Jan 1, 2010 and Dec 31, 2014 (total duration must be at least 16 minutes)',
+      '(23) Watch an anime that began airing between Jan 1, 2020 and Dec 31, 2025',
     description:
-      '(23) Watch an anime that began airing between Jan 1, 2010 and Dec 31, 2014 (total duration must be at least 16 minutes)',
+      '(23) Watch an anime that began airing between Jan 1, 2020 and Dec 31, 2025',
     addlInfo: [],
-    minigames: ['Tarot Route 2.1', 'Tarot Route 2.2', 'Tarot Route 3.1'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateStartDate('2010-01-01', 'gte'),
-      validateStartDate('2014-12-31', 'lte'),
+    defaultExtraInfo: [],
+    courses: [
+      Main.Burger,
+      Main.FishAndChips,
+      Main.Pizza,
+      Main.Sandwich,
+      Main.Sushi,
     ],
+    validators: [
+      validateStartDate('2020-01-01', 'gte'),
+      validateStartDate('2025-12-31', 'lte'),
+    ],
+    manualValidators: [],
   },
   '24': {
     bbCode:
-      '(24) Watch an anime that began airing between Jan 1, 2000 and Dec 31, 2009 (total duration must be at least 16 minutes)',
+      '(24) Watch an anime that began airing between Jan 1, 2015 and Dec 31, 2019',
     description:
-      '(24) Watch an anime that began airing between Jan 1, 2000 and Dec 31, 2009 (total duration must be at least 16 minutes)',
+      '(24) Watch an anime that began airing between Jan 1, 2015 and Dec 31, 2019',
     addlInfo: [],
-    minigames: ['Whack-a-Mole D'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateStartDate('2000-01-01', 'gte'),
-      validateStartDate('2009-12-31', 'lte'),
+    defaultExtraInfo: [],
+    courses: [
+      Side.Fries,
+      Side.GarlicBread,
+      Side.Onigiri,
+      Side.OnionRings,
+      Side.Tofu,
     ],
+    validators: [
+      validateStartDate('2015-01-01', 'gte'),
+      validateStartDate('2019-12-31', 'lte'),
+    ],
+    manualValidators: [],
   },
   '25': {
     bbCode:
-      '(25) Watch an anime that began airing between Jan 1, 1990 and Dec 31, 1999 (total duration must be at least 16 minutes)',
+      '(25) Watch an anime that began airing between Jan 1, 2010 and Dec 31, 2014',
     description:
-      '(25) Watch an anime that began airing between Jan 1, 1990 and Dec 31, 1999 (total duration must be at least 16 minutes)',
+      '(25) Watch an anime that began airing between Jan 1, 2010 and Dec 31, 2014',
     addlInfo: [],
-    minigames: ['Plinko Tier 2'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateStartDate('1990-01-01', 'gte'),
-      validateStartDate('1999-12-31', 'lte'),
+    defaultExtraInfo: [],
+    courses: [
+      Main.Burger,
+      Main.FishAndChips,
+      Main.Lasagna,
+      Main.Spaghetti,
+      Main.Sushi,
     ],
+    validators: [
+      validateStartDate('2010-01-01', 'gte'),
+      validateStartDate('2014-12-31', 'lte'),
+    ],
+    manualValidators: [],
   },
   '26': {
     bbCode:
-      '(26) Watch an anime that  began airing between Jan 1, 1960 and Dec 31, 1989',
+      '(26) Watch an anime that began airing between Jan 1, 2000 and Dec 31, 2009',
     description:
-      '(26) Watch an anime that  began airing between Jan 1, 1960 and Dec 31, 1989',
+      '(26) Watch an anime that began airing between Jan 1, 2000 and Dec 31, 2009',
     addlInfo: [],
-    minigames: ['Bingo 21B'],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cookie, Dessert.Milkshake],
+    validators: [
+      validateStartDate('2000-01-01', 'gte'),
+      validateStartDate('2009-12-31', 'lte'),
+    ],
+    manualValidators: [],
+  },
+  '27': {
+    bbCode:
+      '(27) Watch an anime that began airing between Jan 1, 1990 and Dec 31, 1999',
+    description:
+      '(27) Watch an anime that began airing between Jan 1, 1990 and Dec 31, 1999',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Side.OnionRings, Side.Tofu],
+    validators: [
+      validateStartDate('1990-01-01', 'gte'),
+      validateStartDate('1999-12-31', 'lte'),
+    ],
+    manualValidators: [],
+  },
+  '28': {
+    bbCode:
+      '(28) Watch an anime that  began airing between Jan 1, 1960 and Dec 31, 1989',
+    description:
+      '(28) Watch an anime that  began airing between Jan 1, 1960 and Dec 31, 1989',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza, Starter.Salad, Starter.SpringRolls],
     validators: [
       validateStartDate('1960-01-01', 'gte'),
       validateStartDate('1989-12-31', 'lte'),
     ],
-  },
-  '27': {
-    bbCode:
-      '(27) Watch an anime that started airing on a [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Monday.txt][color=#4BB1DF][b]Monday[/b][/color][/url] or [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Tuesday.txt][color=#4BB1DF][b]Tuesday[/b][/color][/url] (day must be listed on [url=https://i.imgur.com/FchOYtT.png][color=#9068D4][b]MAL page[/b][/color][/url])',
-    description:
-      '(27) Watch an anime that started airing on a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Monday.txt">Monday</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Tuesday.txt">Tuesday</a> (day must be listed on <a href="https://i.imgur.com/FchOYtT.png">MAL page</a>)',
-    addlInfo: [],
-    minigames: ['Whack-a-Mole D'],
-    validators: [validateBroadcastDate(['Mondays', 'Tuesdays'])],
-  },
-  '28': {
-    bbCode:
-      '(28) Watch an anime that started airing on a [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Wednesday.txt][color=#4BB1DF][b]Wednesday[/b][/color][/url] or [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Thursday.txt][color=#4BB1DF][b]Thursday[/b][/color][/url] (day must be listed on [url=https://i.imgur.com/Wi5bSB2.png][color=#9068D4][b]MAL page[/b][/color][/url])',
-    description:
-      '(28) Watch an anime that started airing on a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Wednesday.txt">Wednesday</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Thursday.txt">Thursday</a> (day must be listed on <a href="https://i.imgur.com/Wi5bSB2.png">MAL page</a>)',
-    addlInfo: [],
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [validateBroadcastDate(['Wednesdays', 'Thursdays'])],
+    manualValidators: [],
   },
   '29': {
-    bbCode:
-      '(29) Watch an anime that started airing on a [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Friday.txt][color=#4BB1DF][b]Friday[/b][/color][/url] or [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Saturday.txt][color=#4BB1DF][b]Saturday[/b][/color][/url] (day must be listed on [url=https://i.imgur.com/x60U8GM.png][color=#9068D4][b]MAL page[/b][/color][/url])',
-    description:
-      '(29) Watch an anime that started airing on a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Friday.txt">Friday</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Saturday.txt">Saturday</a> (day must be listed on <a href="https://i.imgur.com/x60U8GM.png">MAL page</a>)',
+    bbCode: '(29) Watch an anime that started airing on a [b]Monday[/b]',
+    description: '(29) Watch an anime that started airing on a <b>Monday</b>',
     addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [validateBroadcastDate(['Fridays', 'Saturdays'])],
+    defaultExtraInfo: [],
+    courses: [
+      Main.FishAndChips,
+      Main.Omurice,
+      Main.Pizza,
+      Main.Sandwich,
+      Main.Sushi,
+    ],
+    validators: [validateBroadcastDate(['Monday'])],
+    manualValidators: [],
   },
   '30': {
-    bbCode:
-      '(30) Watch an anime that started airing on a [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Sunday.txt][color=#4BB1DF][b]Sunday[/b][/color][/url] or [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Unknown.txt][color=#4BB1DF][b]Unknown[/b][/color][/url] day (day must be listed on [url=https://i.imgur.com/qUSGGWN.png][color=#9068D4][b]MAL page[/b][/color][/url])',
-    description:
-      '(30) Watch an anime that started airing on a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Sunday.txt">Sunday</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Day%20of%20week/Unknown.txt">Unknown</a> day (day must be listed on <a href="https://i.imgur.com/qUSGGWN.png">MAL page</a>)',
+    bbCode: '(30) Watch an anime that started airing on a [b]Tuesday[/b]',
+    description: '(30) Watch an anime that started airing on a <b>Tuesday</b>',
     addlInfo: [],
-    minigames: ['Bingo 21A', 'Bingo 21B'],
-    validators: [validateBroadcastDate(['Sundays', 'Unknown'])],
+    defaultExtraInfo: [],
+    courses: [Side.Fries, Side.GarlicBread, Side.OnionRings],
+    validators: [validateBroadcastDate(['Tuesday'])],
+    manualValidators: [],
   },
   '31': {
-    bbCode:
-      '(31) Watch an anime that started airing in [b]January[/b] (each episode must be at least 16 minutes)',
+    bbCode: '(31) Watch an anime that started airing on a [b]Wednesday[/b]',
     description:
-      '(31) Watch an anime that started airing in <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/1.txt">January</a> (each episode must be at least 16 minutes)',
+      '(31) Watch an anime that started airing on a <b>Wednesday</b>',
     addlInfo: [],
-    minigames: ['Bingo 21A', 'Bingo 21B'],
-    validators: [validateStartMonth([1]), validateEpisodeDuration(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie, Dessert.Cake, Dessert.Dango],
+    validators: [validateBroadcastDate(['Wednesday'])],
+    manualValidators: [],
   },
   '32': {
-    bbCode:
-      '(32) Watch an anime that started airing in [b]April[/b] (each episode must be at least 16 minutes)',
-    description:
-      '(32) Watch an anime that started airing in <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/4.txt">April</a> (each episode must be at least 16 minutes)',
+    bbCode: '(32) Watch an anime that started airing on a [b]Thursday[/b]',
+    description: '(32) Watch an anime that started airing on a <b>Thursday</b>',
     addlInfo: [],
-    minigames: ['Tarot Route 2', 'Tarot Route 3'],
-    validators: [validateStartMonth([4]), validateEpisodeDuration(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Starter.Salad],
+    validators: [validateBroadcastDate(['Thursday'])],
+    manualValidators: [],
   },
   '33': {
-    bbCode:
-      '(33) Watch an anime that started airing in [b]July[/b] (each episode must be at least 16 minutes)',
-    description:
-      '(33) Watch an anime that started airing in <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/7.txt">July</a> (each episode must be at least 16 minutes)',
+    bbCode: '(33) Watch an anime that started airing on a [b]Friday[/b]',
+    description: '(33) Watch an anime that started airing on a <b>Friday</b>',
     addlInfo: [],
-    minigames: ['Tarot Route 2', 'Tarot Route 3.1', 'Tarot Route 3.2'],
-    validators: [validateStartMonth([7]), validateEpisodeDuration(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Starter.ChickenWings, Starter.Prawns, Starter.Soup],
+    validators: [validateBroadcastDate(['Friday'])],
+    manualValidators: [],
   },
   '34': {
-    bbCode:
-      '(34) Watch an anime that started airing in [b]October[/b] (each episode must be at least 16 minutes)',
-    description:
-      '(34) Watch an anime that started airing in <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/10.txt">October</a> (each episode must be at least 16 minutes)',
+    bbCode: '(34) Watch an anime that started airing on a [b]Saturday[/b]',
+    description: '(34) Watch an anime that started airing on a <b>Saturday</b>',
     addlInfo: [],
-    minigames: ['Plinko Tier 3'],
-    validators: [validateStartMonth([10]), validateEpisodeDuration(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Main.Burger, Main.FishAndChips, Main.Lasagna, Main.Omurice],
+    validators: [validateBroadcastDate(['Saturday'])],
+    manualValidators: [],
   },
   '35': {
-    bbCode:
-      '(35) Watch an anime that started airing in [b]February[/b] or [b]May[/b] (total duration must be at least 16 minutes)',
-    description:
-      '(35) Watch an anime that started airing in <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/2.txt">February</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/5.txt">May</a> (total duration must be at least 16 minutes)',
+    bbCode: '(35) Watch an anime that started airing on a [b]Sunday[/b]',
+    description: '(35) Watch an anime that started airing on a <b>Sunday</b>',
     addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [validateStartMonth([2, 5]), validateRuntime(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Side.Fries, Side.GarlicBread],
+    validators: [validateBroadcastDate(['Sunday'])],
+    manualValidators: [],
   },
   '36': {
-    bbCode:
-      '(36) Watch an anime that started airing in [b]March[/b] or [b]November[/b] (total duration must be at least 16 minutes)',
-    description:
-      '(36) Watch an anime that started airing in <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/3.txt">March</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/11.txt">November</a> (total duration must be at least 16 minutes)',
+    bbCode: '(36) Watch an anime that started airing in [b]January[/b]',
+    description: '(36) Watch an anime that started airing in <b>January</b>',
     addlInfo: [],
-    minigames: ['Whack-a-Mole D'],
-    validators: [validateStartMonth([3, 11]), validateRuntime(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Main.Omurice, Main.Pizza, Main.Sushi],
+    validators: [validateStartMonth([1])],
+    manualValidators: [],
   },
   '37': {
-    bbCode:
-      '(37) Watch an anime that started airing in [b]June[/b] or [b]August[/b] (total duration must be at least 16 minutes)',
-    description:
-      '(37) Watch an anime that started airing in <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/6.txt">June</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/8.txt">August</a> (total duration must be at least 16 minutes)',
+    bbCode: '(37) Watch an anime that started airing in [b]February[/b]',
+    description: '(37) Watch an anime that started airing in <b>February</b>',
     addlInfo: [],
-    minigames: ['Whack-a-Mole D'],
-    validators: [validateStartMonth([6, 8]), validateRuntime(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza, Starter.Salad],
+    validators: [validateStartMonth([2])],
+    manualValidators: [],
   },
   '38': {
-    bbCode:
-      '(38) Watch an anime that started airing in [b]September[/b] or [b]December[/b] (total duration must be at least 16 minutes)',
-    description:
-      '(38) Watch an anime that started airing in <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/9.txt">September</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Start%20Month/12.txt">December</a> (total duration must be at least 16 minutes)',
+    bbCode: '(38) Watch an anime that started airing in [b]March[/b]',
+    description: '(38) Watch an anime that started airing in <b>March</b>',
     addlInfo: [],
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [validateStartMonth([9, 12]), validateRuntime(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Side.Onigiri, Side.OnionRings, Side.Tofu],
+    validators: [validateStartMonth([3])],
+    manualValidators: [],
   },
   '39': {
-    bbCode:
-      '(39) Watch an anime that began airing the same [url=https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20Start%20Year][color=#4BB1DF][b]year[/b][/color][/url] you joined MAL',
-    description:
-      '(39) Watch an anime that began airing the same <a href="https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20Start%20Year">year</a> you joined MAL',
-    addlInfo: [
-      '- The anime must air in the same year you joined but can be any month and day',
-    ],
-    minigames: ['Plinko Tier 3'],
-    validators: [],
+    bbCode: '(39) Watch an anime that started airing in [b]April[/b]',
+    description: '(39) Watch an anime that started airing in <b>April</b>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Prawns, Starter.Salad, Starter.Soup],
+    validators: [validateStartMonth([4])],
+    manualValidators: [],
   },
   '40': {
-    bbCode:
-      '(40) Watch an anime that began airing the same [url=https://i.imgur.com/8bRDbk2.png][color=#9068D4][b]season and year[/b][/color][/url] as one of the anime in your MAL favorites (favorite anime must have been completed before item is started)',
-    description:
-      '(40) Watch an anime that began airing the same <a href="https://i.imgur.com/8bRDbk2.png">season and year</a> as one of the anime in your MAL favorites (favorite anime must have been completed before item is started)',
-    addlInfo: [
-      '- The favorite anime must be listed on your profile and <em>must be completed</em> (no airing items) before this item is started',
-      '- The anime do not have to be TV type or show the season/year on their MAL page',
-    ],
-    defaultExtraInfo: 'Favorite Anime: | Season/Year: ',
-    minigames: ['Darts'],
-    validators: [],
+    bbCode: '(40) Watch an anime that started airing in [b]May[/b]',
+    description: '(40) Watch an anime that started airing in <b>May</b>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.IceCream],
+    validators: [validateStartMonth([5])],
+    manualValidators: [],
   },
   '41': {
-    bbCode:
-      '(41) Watch an anime that began airing the same [url=https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20Start%20Month][color=#4BB1DF][b]month[/b][/color][/url] (eg. July) you joined MAL',
-    description:
-      '(41) Watch an anime that began airing the same <a href="https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20Start%20Month">month</a> (eg. July) you joined MAL',
-    addlInfo: [
-      '- The anime must air in the same month but can be any year and day',
-    ],
-    minigames: ['Darts'],
-    validators: [],
+    bbCode: '(41) Watch an anime that started airing in [b]June[/b]',
+    description: '(41) Watch an anime that started airing in <b>June</b>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.Milkshake],
+    validators: [validateStartMonth([6])],
+    manualValidators: [],
   },
   '42': {
-    bbCode:
-      '(42) Watch an anime that began airing the same [url=https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20Start%20Day][color=#4BB1DF][b]day[/b][/color][/url] (eg. 18th) you joined MAL',
-    description:
-      '(42) Watch an anime that began airing the same <a href="https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20Start%20Day">day</a> (eg. 18th) you joined MAL',
-    addlInfo: [
-      '- The anime must air on the same day but can be any year and month',
+    bbCode: '(42) Watch an anime that started airing in [b]July[/b]',
+    description: '(42) Watch an anime that started airing in <b>July</b>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [
+      Side.Fries,
+      Side.Onigiri,
+      Side.OnionRings,
+      Side.TheMelon,
+      Side.Tofu,
     ],
-    minigames: ['Whack-a-Mole D'],
-    validators: [],
+    validators: [validateStartMonth([7])],
+    manualValidators: [],
   },
   '43': {
-    bbCode:
-      '(43) Watch an anime that has a main title starting with the same [url=https://i.imgur.com/2ftTmQE.png][color=#9068D4][b]letter/number[/b][/color][/url] as your MAL username',
-    description:
-      '(43) Watch an anime that has a main title starting with the same <a href="https://i.imgur.com/2ftTmQE.png">letter/number</a> as your MAL username',
-    addlInfo: [
-      "- If your username starts with a non-standard character (anything that isn't a number or letter like -, *, [, ], _, etc) the anime's main title can start with any non-standard character",
-    ],
-    minigames: ['Darts'],
-    validators: [validateTitleUsername()],
+    bbCode: '(43) Watch an anime that started airing in [b]August[/b]',
+    description: '(43) Watch an anime that started airing in <b>August</b>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Prawns, Starter.Soup],
+    validators: [validateStartMonth([8])],
+    manualValidators: [],
   },
   '44': {
-    bbCode:
-      '(44) Watch an anime with 7 or more words in the main title (symbols and numbers do not count as words)',
-    description:
-      '(44) Watch an anime with 7 or more words in the main title (symbols and numbers do not count as words)',
-    addlInfo: [
-      '- The words must be separated by a space; two words linked with a symbol (no space) will count as one word. Example: "Steins;Gate: Oukoubakko no Poriomania" has four words',
-    ],
-    minigames: ['Tarot Route 2', 'Tarot Route 3.1', 'Tarot Route 3.2'],
-    validators: [],
+    bbCode: '(44) Watch an anime that started airing in [b]September[/b]',
+    description: '(44) Watch an anime that started airing in <b>September</b>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza],
+    validators: [validateStartMonth([9])],
+    manualValidators: [],
   },
   '45': {
-    bbCode:
-      '(45) Watch an anime that has an English number (10, ten) somewhere in the [url=https://i.imgur.com/Qp2di40.png][color=#9068D4][b]main title[/b][/color][/url]',
-    description:
-      '(45) Watch an anime that has an English number (10, ten) somewhere in the <a href="https://i.imgur.com/Qp2di40.png">main title</a>',
+    bbCode: '(45) Watch an anime that started airing in [b]October[/b]',
+    description: '(45) Watch an anime that started airing in <b>October</b>',
     addlInfo: [],
-    defaultExtraInfo: 'English Number: ',
-    minigames: ['Tarot Route 1'],
-    validators: [],
+    defaultExtraInfo: [],
+    courses: [Main.Burger, Main.FishAndChips, Main.Omurice, Main.Sandwich],
+    validators: [validateStartMonth([10])],
+    manualValidators: [],
   },
   '46': {
-    bbCode:
-      '(46) Watch an anime that has a [url=https://i.imgur.com/yAsZclH.png][color=#9068D4][b]one-word[/b][/color][/url] main title',
-    description:
-      '(46) Watch an anime that has a <a href="https://i.imgur.com/yAsZclH.png">one-word</a> main title',
-    addlInfo: [
-      '- The word cannot be a symbol, single letter, or number (unless the number is written as a word)',
-      '- Titles with punctuation separating words are not allowed (like Steins;Gate and K-On!)',
-    ],
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [],
+    bbCode: '(46) Watch an anime that started airing in [b]November[/b]',
+    description: '(46) Watch an anime that started airing in <b>November</b>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Sandwich, Main.Spaghetti],
+    validators: [validateStartMonth([11])],
+    manualValidators: [],
   },
   '47': {
-    bbCode:
-      '(47) Watch an anime that has a main character’s [url=https://i.imgur.com/O2Ww6kD.png][color=#9068D4][b]name/nickname/alternative name[/b][/color][/url] in the main title',
-    description: `(47) Watch an anime that has a main character's <a href="https://i.imgur.com/O2Ww6kD.png">name/nickname/alternative name</a> in the main title`,
+    bbCode: '(47) Watch an anime that started airing in [b]December[/b]',
+    description: '(47) Watch an anime that started airing in <b>December</b>',
     addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [],
+    defaultExtraInfo: [],
+    courses: [Main.FishAndChips, Main.Omurice, Main.Spaghetti, Main.Sushi],
+    validators: [validateStartMonth([12])],
+    manualValidators: [],
   },
   '48': {
     bbCode:
-      '(48) Watch an anime with at least two different [url=https://i.imgur.com/cIxXfc9.png][color=#9068D4][b]non-alphanumeric[/b][/color][/url] characters in the main title',
+      '(48) Watch an anime that began airing the same [b]year[/b] you joined MAL',
     description:
-      '(48) Watch an anime with at least two different <a href="https://i.imgur.com/cIxXfc9.png">non-alphanumeric</a> characters in the main title',
-    addlInfo: [],
-    minigames: ['Plinko Tier 1'],
+      '(48) Watch an anime that began airing the same <b>year</b> you joined MAL',
+    addlInfo: [
+      '— The anime must air in the same year you joined but can be any month and day',
+    ],
+    defaultExtraInfo: ['Join Year:'],
+    courses: [Starter.ChickenWings, Starter.Gyoza, Starter.Soup],
     validators: [],
+    manualValidators: ['Anime began airing the same year you joined MAL'],
   },
   '49': {
     bbCode:
-      '(49) Watch an anime that has at least 3 words in the main title that start with the same letter',
+      '(49) Watch an anime that began airing the same [b]month[/b] (eg. July) you joined MAL',
     description:
-      '(49) Watch an anime that has at least 3 words in the main title that start with the same letter',
-    addlInfo: [],
-    minigames: ['Tarot Route 2.1', 'Tarot Route 2.2', 'Tarot Route 3'],
-    validators: [validateWordsWithSameLetter(3)],
+      '(49) Watch an anime that began airing the same <b>month</b> (eg. July) you joined MAL',
+    addlInfo: [
+      '— The anime must air in the same month but can be any year and day',
+    ],
+    defaultExtraInfo: ['Join Month:'],
+    courses: [Dessert.Dango],
+    validators: [],
+    manualValidators: ['Anime began airing the same month you joined MAL'],
   },
   '50': {
     bbCode:
-      '(50) Watch an anime that is tagged with one of your two least watched [url=https://i.imgur.com/wfMCV3n.png][color=#9068D4][b]Genres/Themes/Demographics by Days[/b][/color][/url] according to your MAL statistics and provide a screenshot showing the genre selections',
+      '(50) Watch an anime that began airing the same [b]day[/b] (eg. 18th) you joined MAL',
     description:
-      '(50) Watch an anime that is tagged with one of your two least watched <a href="https://i.imgur.com/wfMCV3n.png">Genres/Themes/Demographics by Days</a> according to your MAL statistics and provide a screenshot showing the genre selections',
+      '(50) Watch an anime that began airing the same <b>day</b> (eg. 18th) you joined MAL',
     addlInfo: [
-      '- On your profile under Statistics click "All Anime Stats"; click "Genres"; sort by smallest number of "Days"',
-      '- "Genres", "Themes", and "Demographics" should all have a check mark ("Explicit Genres" is optional)',
+      '— The anime must air on the same day but can be any year and month',
     ],
-    defaultExtraInfo: 'Least Watched 1: | Least Watched 2: | Screenshot: ',
-    minigames: ['Whack-a-Mole B'],
+    defaultExtraInfo: ['Join Day:'],
+    courses: [Main.FishAndChips, Main.Sandwich, Main.Spaghetti, Main.Sushi],
     validators: [],
+    manualValidators: ['Anime began airing the same day you joined MAL'],
   },
   '51': {
     bbCode:
-      '(51) Watch an anime that has the number [url=https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20ID][color=#4BB1DF][b]25[/b][/color][/url] in its [url=https://i.imgur.com/qCG26tL.png][color=#9068D4][b]MAL ID[/b][/color][/url]',
-    description: `(51) Watch an anime that has the number <a href=""https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20ID/ID%20contains%20'25'.txt"">25</a> in its <a href="https://i.imgur.com/qCG26tL.png">MAL ID</a>`,
+      '(51) Watch an anime that has a main title starting with the same letter/number/character as your MAL username',
+    description:
+      '(51) Watch an anime that has a main title starting with the same letter/number/character as your MAL username',
     addlInfo: [
-      `- The MAL ID is the set of digits after the "anime/" section of the anime page's URL (Cowboy Bebop's MAL ID is 1)`,
+      "— If your username starts with a non-standard character (anything that isn't a number or letter like -, *, [, ], _, etc) the anime's main title can start with any non-alphanumeric character",
     ],
-    minigames: ['Bingo 21A', 'Bingo 21B'],
-    validators: [validateMALIdContains('25')],
+    defaultExtraInfo: [],
+    courses: [Main.Lasagna, Main.Sandwich],
+    validators: [validateTitleUsername()],
+    manualValidators: [],
   },
   '52': {
     bbCode:
-      '(52) Watch an anime that was [url=https://myanimelist.net/reviews.php?t=anime][color=#4BB1DF][b]Reviewed[/b][/color][/url] the same [url=https://i.imgur.com/Gb3RDW4.png][color=#9068D4][b]2025 date[/b][/color][/url] you started it (each episode must be at least 16 minutes)',
+      '(52) Watch an anime with 7 or more words (not symbols and numbers) in the main title',
     description:
-      '(52) Watch an anime that was <a href="https://myanimelist.net/reviews.php?t=anime">Reviewed</a> the same <a href="https://i.imgur.com/Gb3RDW4.png">2025 date</a> you started it (each episode must be at least 16 minutes)',
+      '(52) Watch an anime with 7 or more words (not symbols and numbers) in the main title',
     addlInfo: [
-      '- It is recommended that you save a screenshot in case the review gets deleted',
-      '- Reviews that are not in English or look as if they will get deleted (such as troll reviews) will not be accepted',
+      '— The words must be separated by a space; two words linked with a symbol (no space) will count as one word. Example: "Steins;Gate: Oukoubakko no Poriomania" has four words',
     ],
-    defaultExtraInfo: 'Review Link: | Screenshot: ',
-    minigames: ['Duck Pond'],
+    defaultExtraInfo: [],
+    courses: [
+      Starter.ChickenWings,
+      Starter.Prawns,
+      Starter.Soup,
+      Starter.SpringRolls,
+    ],
     validators: [],
+    manualValidators: ['Anime has 7 or more words in the title'],
   },
   '53': {
     bbCode:
-      '(53) Watch an anime with a Review that has at least three different [url=https://i.imgur.com/b3jbqzt.png][color=#9068D4][b]reaction emojis[/b][/color][/url]',
+      '(53) Watch an anime that contains an English number (9, five) somewhere in the main title',
     description:
-      '(53) Watch an anime with a Review that has at least three different <a href="https://i.imgur.com/b3jbqzt.png">reaction emojis</a>',
+      '(53) Watch an anime that contains an English number (9, five) somewhere in the main title',
     addlInfo: [],
-    defaultExtraInfo: 'Review Link: | Screenshot: ',
-    minigames: ['Darts'],
+    defaultExtraInfo: [],
+    courses: [Side.Fries, Side.Onigiri, Side.OnionRings, Side.Tofu],
     validators: [],
+    manualValidators: ['Anime contains an English number in the title'],
   },
   '54': {
-    bbCode:
-      '(54) Watch an anime where the difference between [url=https://i.imgur.com/G2yPp7P.png][color=#9068D4][b]ranking and popularity[/b][/color][/url] is at least 1,500',
-    description:
-      '(54) Watch an anime where the difference between <a href="https://i.imgur.com/G2yPp7P.png">ranking and popularity</a> is at least 1,500',
-    addlInfo: [],
-    defaultExtraInfo: 'Ranking When Started: | Popularity When Started: ',
-    minigames: ['Whack-a-Mole E'],
-    validators: [validateRankingPopularityDiff(1500, 'gte')],
+    bbCode: '(54) Watch an anime that has a one-word main title',
+    description: '(54) Watch an anime that has a one-word main title',
+    addlInfo: [
+      '— The word cannot be a symbol, single letter, or number (unless the number is written as a word)',
+      '— Titles with punctuation separating words are not allowed (like Steins;Gate and K-On!)',
+    ],
+    defaultExtraInfo: [],
+    courses: [
+      Starter.Gyoza,
+      Starter.Prawns,
+      Starter.Salad,
+      Starter.SpringRolls,
+    ],
+    validators: [],
+    manualValidators: ['Anime has a one-word title'],
   },
   '55': {
     bbCode:
-      '(55) Watch an anime that has [url=https://i.imgur.com/HLaZ9WR.png][color=#9068D4][b]no Recommendations[/b][/color][/url] (anime must finish airing before you start it)',
+      '(55) Watch an anime that has a main character’s name/nickname/alternative name in the main title',
     description:
-      '(55) Watch an anime that has <a href="https://i.imgur.com/HLaZ9WR.png">no Recommendations</a> (anime must finish airing before you start it)',
-    addlInfo: [],
-    minigames: ['Bingo 17B'],
-    validators: [validateFinishedAiring()],
+      '(55) Watch an anime that has a main character’s name/nickname/alternative name in the main title',
+    addlInfo: [
+      "— The name/nickname/alternative name must be listed on the character's MAL page in order to be valid",
+    ],
+    defaultExtraInfo: ['Character:'],
+    courses: [Dessert.Cake, Dessert.Milkshake],
+    validators: [],
+    manualValidators: ["Anime has main character's name in the title"],
   },
   '56': {
     bbCode:
-      '(56) Watch an anime with more users in the "[url=https://i.imgur.com/9J0fS86.png][color=#9068D4][b]Plan-to-Watch[/b][/color][/url]" stat than the "Completed" stat (anime must finish airing before you start it)',
+      '(56) Watch an anime with at least two [u]different[/u] non-alphanumeric characters in the main title',
     description:
-      '(56) Watch an anime with more users in the "<a href="https://i.imgur.com/9J0fS86.png">Plan-to-Watch</a>" stat than the "Completed" stat (anime must finish airing before you start it)',
+      '(56) Watch an anime with at least two <u>different</u> non-alphanumeric characters in the main title',
     addlInfo: [],
-    defaultExtraInfo: 'Plan to Watch When Started: | Completed When Started: ',
-    minigames: ['Tarot Route 2.2', 'Tarot Route 3'],
-    validators: [validateFinishedAiring()],
+    defaultExtraInfo: [],
+    courses: [
+      Main.Burger,
+      Main.FishAndChips,
+      Main.Omurice,
+      Main.Pizza,
+      Main.Spaghetti,
+    ],
+    validators: [validateTitleNonAlphanumericCount(2, 'gte')],
+    manualValidators: [],
   },
   '57': {
     bbCode:
-      '(57) Watch an anime with 12 or more episodes that has a synopsis by [url=https://i.imgur.com/5MNklk9.png][color=#9068D4][b]MAL Rewrite[/b][/color][/url] (anime must finish airing before you start it)',
+      '(57) Watch an anime that has 3 or more words in the main title starting with the same letter',
     description:
-      '(57) Watch an anime with 12 or more episodes that has a synopsis by <a href="https://i.imgur.com/5MNklk9.png">MAL Rewrite</a> (anime must finish airing before you start it)',
+      '(57) Watch an anime that has 3 or more words in the main title starting with the same letter',
     addlInfo: [],
-    minigames: ['Whack-a-Mole A'],
-    validators: [validateEpisodeCount(12, 'gte'), validateFinishedAiring()],
+    defaultExtraInfo: [],
+    courses: [Side.Fries, Side.GarlicBread],
+    validators: [validateWordsWithSameLetter(3)],
+    manualValidators: [],
   },
   '58': {
     bbCode:
-      '(58) Watch an anime with 150 or less favorites on MAL (total duration must be at least 16 minutes)',
+      '(58) Watch an anime that uses an English or Japanese color in the main title',
     description:
-      '(58) Watch an anime with 150 or less favorites on MAL (total duration must be at least 16 minutes)',
-    addlInfo: [],
-    minigames: ['Bingo 17B'],
-    validators: [validateFavorites(150, 'lte')],
+      '(58) Watch an anime that uses an English or Japanese color in the main title',
+    addlInfo: [
+      '— Common Japanese colors: Aka/akai (red), Ao/Aoi (blue), Kiiro/kiiroi (yellow), Kuro/kuroi (black), Shiro/shiroi (white), Orenji (orange), Midori (green), Murasaki (purple), Pinku (pink), Haiiro (grey), Chairo (brown), Kin/kiniro (gold), Gin/giniro (silver)',
+    ],
+    defaultExtraInfo: ['Color Used:'],
+    courses: [Main.Lasagna, Main.Pizza, Main.Spaghetti],
+    validators: [],
+    manualValidators: ['Anime uses an English or Japanese color in title'],
   },
   '59': {
     bbCode:
-      '(59) Watch an anime that has a higher score than a listed [url=https://i.imgur.com/wyXhHzB.png][color=#9068D4][b]Adaptation[/b][/color][/url] under related anime',
+      '(59) Watch an anime that uses an English or Japanese animal in the main title',
     description:
-      '(59) Watch an anime that has a higher score than a listed <a href="https://i.imgur.com/wyXhHzB.png">Adaptation</a> under related anime',
-    addlInfo: [],
-    defaultExtraInfo:
-      'Anime Score When Started: | Adaptation Score When Started: ',
-    minigames: ['Bingo 21A'],
+      '(59) Watch an anime that uses an English or Japanese animal in the main title',
+    addlInfo: [
+      '— Common Japanese animals: Neko (cat), Nezumi (mouse), Inu (dog), Tori (bird), Buta (pig), Karasu (crow), Ahiru (duck), Saru (monkey), Uma (horse), Shika (deer), Usagi (rabbit), Kuma (bear), Kaeru (frog), Tako (octopus), Same (shark), Mushi (insect), Hotaru (firefly), Kumo (spider)',
+    ],
+    defaultExtraInfo: ['Animal Used:'],
+    courses: [Starter.Salad],
     validators: [],
+    manualValidators: ['Anime uses an English or Japanese animal in title'],
   },
   '60': {
-    bbCode:
-      '(60) Watch an anime with a popularity lower than [url=https://i.imgur.com/y70AA7b.png][color=#9068D4][b]#418[/b][/color][/url] (total duration must be at least 16 minutes)',
-    description:
-      '(60) Watch an anime with a popularity lower than <a href="https://i.imgur.com/y70AA7b.png">#418</a> (total duration must be at least 16 minutes)',
-    addlInfo: [],
-    defaultExtraInfo: 'Popularity When Started: ',
-    minigames: ['Plinko Tier 2'],
-    validators: [validatePopularity(418, 'gt'), validateRuntime(16, 'gte')],
+    bbCode: '(60) Watch an anime that has a non-Japanese main title',
+    description: '(60) Watch an anime that has a non-Japanese main title',
+    addlInfo: ['— Examples: School Days, Gravitation'],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cookie, Dessert.Dango],
+    validators: [],
+    manualValidators: ['Anime has a non-Japanese title'],
   },
   '61': {
     bbCode:
-      '(61) Watch an anime with a popularity lower than [url=https://i.imgur.com/s8WrXx6.png][color=#9068D4][b]#1721[/b][/color][/url] (total duration must be at least 16 minutes)',
+      '(61) Watch an anime with a main title that shares at least three different letters/numbers/symbols with your MAL username',
     description:
-      '(61) Watch an anime with a popularity lower than <a href="https://i.imgur.com/s8WrXx6.png">#1721</a> (total duration must be at least 16 minutes)',
+      '(61) Watch an anime with a main title that shares at least three different letters/numbers/symbols with your MAL username',
     addlInfo: [],
-    defaultExtraInfo: 'Popularity When Started: ',
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [validatePopularity(1721, 'gt'), validateRuntime(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [Main.Burger, Main.Pizza, Main.Sandwich, Main.Spaghetti],
+    validators: [validateTitleUsernameShareCount(3, 'gte')],
+    manualValidators: [],
   },
   '62': {
-    bbCode:
-      '(62) Watch an anime with a popularity lower than [url=https://i.imgur.com/E0ei7CX.png][color=#9068D4][b]#4240[/b][/color][/url] (total duration must be at least 16 minutes)',
+    bbCode: '(62) Watch an anime that has a main title starting with S or Z',
     description:
-      '(62) Watch an anime with a popularity lower than <a href="https://i.imgur.com/E0ei7CX.png">#4240</a> (total duration must be at least 16 minutes)',
+      '(62) Watch an anime that has a main title starting with S or Z',
     addlInfo: [],
-    defaultExtraInfo: 'Popularity When Started: ',
-    minigames: ['Duck Pond'],
-    validators: [validatePopularity(4240, 'gt'), validateRuntime(16, 'gte')],
+    defaultExtraInfo: [],
+    courses: [
+      Main.Burger,
+      Main.Omurice,
+      Main.Pizza,
+      Main.Sandwich,
+      Main.Spaghetti,
+    ],
+    validators: [validateTitleStartsWith(['S', 'Z'])],
+    manualValidators: [],
   },
   '63': {
     bbCode:
-      '(63) Watch an anime with a score of 8.22 or above (anime must finish airing before you start it)',
+      '(63) Watch an anime that has a main title starting with A, G, or N',
     description:
-      '(63) Watch an anime with a score of 8.22 or above (anime must finish airing before you start it)',
+      '(63) Watch an anime that has a main title starting with A, G, or N',
     addlInfo: [],
-    minigames: ['Whack-a-Mole E'],
-    validators: [validateScore(8.22, 'gte'), validateFinishedAiring()],
+    defaultExtraInfo: [],
+    courses: [Main.Burger, Main.Lasagna, Main.Omurice, Main.Pizza],
+    validators: [validateTitleStartsWith(['A', 'G', 'N'])],
+    manualValidators: [],
   },
   '64': {
     bbCode:
-      '(64) Watch an anime with a score of 6.23 or below (anime must finish airing before you start it)',
+      '(64) Watch an anime that has a main title starting with C, D, or O',
     description:
-      '(64) Watch an anime with a score of 6.23 or below (anime must finish airing before you start it)',
+      '(64) Watch an anime that has a main title starting with C, D, or O',
     addlInfo: [],
-    minigames: ['Tarot Route 2', 'Tarot Route 3.1', 'Tarot Route 3.2'],
-    validators: [validateScore(6.23, 'lte'), validateFinishedAiring()],
+    defaultExtraInfo: [],
+    courses: [
+      Side.Fries,
+      Side.GarlicBread,
+      Side.Onigiri,
+      Side.TheMelon,
+      Side.Tofu,
+    ],
+    validators: [validateTitleStartsWith(['C', 'D', 'O'])],
+    manualValidators: [],
   },
   '65': {
     bbCode:
-      '(65) Watch an anime tagged with either [url=https://anidb.net/tag/1528/animetb/?cat.minweight=0&h=1&noalias=1&orderby.name=0.1&view=list][color=#4BB1DF][b]Artificial Intelligence[/b][/color][/url] or [url=https://anidb.net/tag/1528/animetb/?cat.minweight=0&h=1&noalias=1&orderby.name=0.1&view=list][color=#4BB1DF][b]Android[/b][/color][/url] on [url=https://anidb.net/][color=#4BB1DF][b]AniDB[/b][/color][/url]',
+      '(65) Watch an anime that has a main title starting with F, I, or M',
     description:
-      '(65) Watch an anime tagged with either <a href="https://anidb.net/tag/1528/animetb/?cat.minweight=0&h=1&noalias=1&orderby.name=0.1&view=list">Artificial Intelligence</a> or <a href="https://anidb.net/tag/1528/animetb/?cat.minweight=0&h=1&noalias=1&orderby.name=0.1&view=list">Android</a> on <a href="https://anidb.net/">AniDB</a>',
+      '(65) Watch an anime that has a main title starting with F, I, or M',
     addlInfo: [],
-    defaultExtraInfo: 'List Used: ',
-    minigames: ['Bingo 21A', 'Bingo 21B'],
-    validators: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.Dango, Dessert.IceCream],
+    validators: [validateTitleStartsWith(['F', 'I', 'M'])],
+    manualValidators: [],
   },
   '66': {
     bbCode:
-      '(66) Watch an anime that has a main character tagged with [url=https://www.anime-planet.com/characters/all?role_id=1&include_tags=354][color=#4BB1DF][b]Hot-Headed[/b][/color][/url] or [url=https://www.anime-planet.com/characters/all?role_id=1&include_tags=428][color=#4BB1DF][b]Selfish[/b][/color][/url] on Anime Planet (character must be listed on MAL)',
+      '(66) Watch an anime that has a main title starting with B, J, P, or U',
     description:
-      '(66) Watch an anime that has a main character tagged with <a href="https://www.anime-planet.com/characters/all?role_id=1&include_tags=354">Hot-Headed</a> or <a href="https://www.anime-planet.com/characters/all?role_id=1&include_tags=428">Selfish</a> on Anime Planet (character must be listed on MAL)',
+      '(66) Watch an anime that has a main title starting with B, J, P, or U',
     addlInfo: [],
-    defaultExtraInfo: 'Main Character: | List Used: ',
-    minigames: ['Plinko Tier 2'],
-    validators: [],
+    defaultExtraInfo: [],
+    courses: [Side.Fries, Side.Onigiri, Side.Tofu],
+    validators: [validateTitleStartsWith(['B', 'J', 'P', 'U'])],
+    manualValidators: [],
   },
   '67': {
     bbCode:
-      '(67) Watch an anime that has an [url=https://www.anime-planet.com/characters/tags/inanimate-objects][color=#4BB1DF][b]Inanimate Object[/b][/color][/url] as a character',
+      '(67) Watch an anime that has a main title starting with E, R, T, or X',
     description:
-      '(67) Watch an anime that has an <a href="https://www.anime-planet.com/characters/tags/inanimate-objects">Inanimate Object</a> as a character',
+      '(67) Watch an anime that has a main title starting with E, R, T, or X',
     addlInfo: [],
-    minigames: ['Tarot Route 2.2', 'Tarot Route 3.1', 'Tarot Route 3.2'],
-    validators: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.Dango, Dessert.Milkshake],
+    validators: [validateTitleStartsWith(['E', 'R', 'T', 'X'])],
+    manualValidators: [],
   },
   '68': {
     bbCode:
-      '(68) Watch an anime that has a main character with majority [url=https://i.imgur.com/WnQAsfu.png][color=#9068D4][b]blue, green, pink, or purple[/b][/color][/url] [url=https://anidb.net/tag/12/chartb][color=#4BB1DF][b]hair color[/b][/color][/url] (just streaks of these colors do not count)',
+      '(68) Watch an anime that has a main title starting with H, L, Q, or Y',
     description:
-      '(68) Watch an anime that has a main character with majority <a href="https://i.imgur.com/WnQAsfu.png">blue, green, pink, or purple</a> <a href="https://anidb.net/tag/12/chartb">hair color</a> (just streaks of these colors do not count)',
-    addlInfo: [
-      "- The character's hair must be mostly one or several of the listed colors; just streaks of them will not be valid",
-      '- The character can have a combination of the listed hair colors, as long as the listed hair colors make up the majority of their hair',
-    ],
-    defaultExtraInfo: 'Main Character: ',
-    minigames: ['Bingo 21A', 'Bingo 21B'],
-    validators: [],
+      '(68) Watch an anime that has a main title starting with H, L, Q, or Y',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Prawns, Starter.Salad],
+    validators: [validateTitleStartsWith(['H', 'L', 'Q', 'Y'])],
+    manualValidators: [],
   },
   '69': {
     bbCode:
-      '(69) Watch an anime with a [url=https://myanimelist.net/character.php?q=narrator&cat=character][color=#4BB1DF][b]Narrator[/b][/color][/url] or [url=https://myanimelist.net/character.php?cat=character&q=narration][color=#4BB1DF][b]Narration[/b][/color][/url] character listed on the Characters and Staff page',
+      '(69) Watch an anime that has a main title starting with K, V, W, or a number/symbol',
     description:
-      '(69) Watch an anime with a <a href="https://myanimelist.net/character.php?q=narrator&cat=character">Narrator</a> or <a href="https://myanimelist.net/character.php?cat=character&q=narration">Narration</a> character listed on the Characters and Staff page',
+      '(69) Watch an anime that has a main title starting with K, V, W, or a number/symbol',
     addlInfo: [],
-    minigames: ['Bingo 21A'],
-    validators: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza, Starter.SpringRolls],
+    validators: [validateTitleStartsWith(['K', 'V', 'W'], true)],
+    manualValidators: [],
   },
   '70': {
     bbCode:
-      '(70) Watch an anime with 3 or more main characters that are of the same gender',
+      '(70) Watch an anime that is tagged with one of your [u]two lowest ranked[/u] Genres/Themes/Demographics by Weighted Score according to your MAL statistics',
     description:
-      '(70) Watch an anime with 3 or more main characters that are of the same gender',
-    addlInfo: [],
-    minigames: ['Darts'],
+      '(70) Watch an anime that is tagged with one of your <u>two lowest ranked</u> Genres/Themes/Demographics by Weighted Score according to your MAL statistics',
+    addlInfo: [
+      '— On your profile under Statistics click "All Anime Stats"; click "Genres"; sort by smallest number of "Weighted" (the sorting triangle will be pointing up)',
+      '— "Genres", "Themes", and "Demographics" should all have a check mark ("Explicit Genres" is optional)',
+      '— Screenshot must show what options were selected at the bottom or the item is invalid',
+    ],
+    defaultExtraInfo: [
+      'Lowest Ranked G/T/D 1:',
+      'Lowest Ranked G/T/D 2:',
+      'MAL Stats Screenshot:',
+    ],
+    courses: [Starter.Gyoza, Starter.Salad],
     validators: [],
+    manualValidators: [
+      'Anime is tagged with one of your two lowest ranked tags',
+    ],
   },
   '71': {
     bbCode:
-      '(71) Watch an anime that only has one main character listed on MAL (can have any number of supporting characters)',
+      '(71) Watch an anime that has the number [url=https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20ID][b]26[/b][/url] in its MAL ID',
     description:
-      '(71) Watch an anime that only has one main character listed on MAL (can have any number of supporting characters)',
-    addlInfo: [],
-    minigames: ['Bingo 21A'],
-    validators: [validateMainCharacterCountEquals(1)],
+      '(71) Watch an anime that has the number <a href="https://github.com/nyomdalee/awc-helper-txt/tree/master/Anime%20by%20ID">26</a> in its MAL ID',
+    addlInfo: [
+      '— The MAL ID is the set of digits after the "anime/" section of the anime page\'s URL (Cowboy Bebop\'s MAL ID is 1)',
+    ],
+    defaultExtraInfo: [],
+    courses: [Main.FishAndChips, Main.Sushi],
+    validators: [validateMALIdContains('26')],
+    manualValidators: [],
   },
   '72': {
     bbCode:
-      '(72) Watch an anime with 8 or more main characters listed on MAL (can have any number of supporting characters)',
+      '(72) Watch an anime that was [url=https://myanimelist.net/reviews.php?t=anime][b]Reviewed[/b][/url] the same 2026 date you started it',
     description:
-      '(72) Watch an anime with 8 or more main characters listed on MAL (can have any number of supporting characters)',
-    addlInfo: [],
-    minigames: ['Whack-a-Mole E'],
-    validators: [validateMainCharacterCountAtLeast(8)],
+      '(72) Watch an anime that was <a href="https://myanimelist.net/reviews.php?t=anime">Reviewed</a> the same 2026 date you started it',
+    addlInfo: [
+      '— It is recommended to save a screenshot in case the review gets deleted',
+      '— Reviews that are not in English and troll reviews will not be accepted',
+    ],
+    defaultExtraInfo: ['Review Link:', 'Review Screenshot:'],
+    courses: [Main.Burger, Main.Sushi],
+    validators: [],
+    manualValidators: ['Anime was reviewed on the same day you started'],
   },
   '73': {
     bbCode:
-      '(73) Watch an anime that has more main characters than supporting characters',
+      '(73) Watch an anime with a Review that has at least four different reaction emojis',
     description:
-      '(73) Watch an anime that has more main characters than supporting characters',
+      '(73) Watch an anime with a Review that has at least four different reaction emojis',
     addlInfo: [],
-    defaultExtraInfo: '# of Mains: | # of Supporting: ',
-    minigames: ['Duck Pond'],
-    validators: [validateMoreMainThanSupporting()],
+    defaultExtraInfo: ['Review Link:', 'Review Screenshot:'],
+    courses: [Drink.Coffee, Drink.Soda, Drink.Tea],
+    validators: [],
+    manualValidators: ['Anime has review with >=4 different reaction emojis'],
   },
   '74': {
     bbCode:
-      '(74) Watch an anime where the same Voice Actor is credited under at least [url=https://i.imgur.com/NNc2N03.png][color=#9068D4][b]two different characters[/b][/color][/url] (main or supporting)',
+      '(74) Watch an anime where the difference between ranking and popularity is at least 1,000',
     description:
-      '(74) Watch an anime where the same Voice Actor is credited under at least <a href="https://i.imgur.com/NNc2N03.png">two different characters</a> (main or supporting)',
-    addlInfo: [
-      "- The voice actor/actress must be listed on the anime's Characters and Staff page next to both characters",
-    ],
-    defaultExtraInfo: 'Voice Actor: | Character 1: | Character 2: ',
-    minigames: ['Bingo 21A', 'Bingo 21B'],
-    validators: [],
+      '(74) Watch an anime where the difference between ranking and popularity is at least 1,000',
+    addlInfo: [],
+    defaultExtraInfo: ['Ranking When Started:', 'Popularity When Started:'],
+    courses: [Drink.Coffee],
+    validators: [validateRankingPopularityDiff(1000, 'gte')],
+    manualValidators: [],
   },
   '75': {
     bbCode:
-      '(75) Watch a [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Time/Morning%20(0600%20-%201159%20JST).txt][color=#4BB1DF][b]morning[/b][/color][/url] anime (broadcast between [url=https://i.imgur.com/441NNyN.png][color=#9068D4][b]6:00 and 11:59[/b][/color][/url] JST)',
+      '(75) Watch an anime that finished airing before starting the item and has [u]no[/u] Recommendations',
     description:
-      '(75) Watch a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Time/Morning%20(0600%20-%201159%20JST).txt">morning</a> anime (broadcast between <a href="https://i.imgur.com/441NNyN.png">6:00 and 11:59</a> JST)',
+      '(75) Watch an anime that finished airing before starting the item and has <u>no</u> Recommendations',
     addlInfo: [],
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [validateAirTime(['06', '07', '08', '09', '10', '11'])],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie],
+    validators: [validateFinishedAiring()],
+    manualValidators: ['Anime has no recommendations'],
   },
   '76': {
     bbCode:
-      '(76) Watch an [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Time/Afternoon-Evening%20(1700%20-%202259%20JST).txt][color=#4BB1DF][b]afternoon/evening[/b][/color][/url] anime (broadcast between [url=https://i.imgur.com/SSUQk90.png][color=#9068D4][b]17:00 and 22:59[/b][/color][/url] JST)',
+      '(76) Watch an anime that finished airing before starting the item and has less than 50,000 Completed members on their Stats page',
     description:
-      '(76) Watch an <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Time/Afternoon-Evening%20(1700%20-%202259%20JST).txt">afternoon/evening</a> anime (broadcast between <a href="https://i.imgur.com/SSUQk90.png">17:00 and 22:59</a> JST)',
+      '(76) Watch an anime that finished airing before starting the item and has less than 50,000 Completed members on their Stats page',
     addlInfo: [],
-    minigames: ['Tarot Route 2.1', 'Tarot Route 2.2'],
-    validators: [validateAirTime(['17', '18', '19', '20', '21', '22'])],
+    defaultExtraInfo: ['Completed Members When Started:'],
+    courses: [Starter.Prawns, Starter.Soup, Starter.SpringRolls],
+    validators: [
+      validateFinishedAiring(),
+      validateStatistics('completed', 50_000, 'lt'),
+    ],
+    manualValidators: [],
   },
   '77': {
     bbCode:
-      '(77) Watch a [url=https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Time/Late%20night%20(2300%20-%200359%20JST).txt][color=#4BB1DF][b]late night[/b][/color][/url] anime (broadcast between [url=https://i.imgur.com/SGi8Z6g.png][color=#9068D4][b]23:00 and 03:59[/b][/color][/url] JST)',
+      '(77) Watch an anime with 10 or more episodes that has a synopsis by MAL Rewrite',
     description:
-      '(77) Watch a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Broadcast/Time/Late%20night%20(2300%20-%200359%20JST).txt">late night</a> anime (broadcast between <a href="https://i.imgur.com/SGi8Z6g.png">23:00 and 03:59</a> JST)',
+      '(77) Watch an anime with 10 or more episodes that has a synopsis by MAL Rewrite',
     addlInfo: [],
-    minigames: ['Plinko Tier 1'],
-    validators: [validateAirTime(['23', '00', '01', '02', '03'])],
+    defaultExtraInfo: [],
+    courses: [
+      Starter.ChickenWings,
+      Starter.Prawns,
+      Starter.Soup,
+      Starter.SpringRolls,
+    ],
+    validators: [validateEpisodeCount(10, 'gte')],
+    manualValidators: ['Anime has synopsis by MAL Rewrite'],
   },
   '78': {
     bbCode:
-      '(78) Watch a listed [url=https://myanimelist.net/stacks/26][color=#4BB1DF][b]Anime no Me[/b][/color][/url], [url=https://myanimelist.net/stacks/78][color=#4BB1DF][b]Nichigo[/b][/color][/url], or [url=https://myanimelist.net/stacks/5][color=#4BB1DF][b]noitaminA[/b][/color][/url] anime',
+      '(78) Watch an anime with 150 or less favorites on MAL when you started watching it',
     description:
-      '(78) Watch a listed <a href="https://myanimelist.net/stacks/26">Anime no Me</a>, <a href="https://myanimelist.net/stacks/78">Nichigo</a>, or <a href="https://myanimelist.net/stacks/5">noitaminA</a> anime',
+      '(78) Watch an anime with 150 or less favorites on MAL when you started watching it',
     addlInfo: [],
-    defaultExtraInfo: 'List Used: ',
-    minigames: ['Bingo 21B'],
-    validators: [validateStack(STACK_78)],
+    defaultExtraInfo: ['Favorites When Started:'],
+    courses: [Side.Fries, Side.GarlicBread, Side.Onigiri, Side.Tofu],
+    validators: [validateFavorites(150, 'lte')],
+    manualValidators: [],
   },
   '79': {
     bbCode:
-      '(79) Watch a listed [url=https://myanimelist.net/stacks/45][color=#4BB1DF][b]Animeism[/b][/color][/url], [url=https://myanimelist.net/stacks/7][color=#4BB1DF][b]NUMAnimation[/b][/color][/url] or [url=https://myanimelist.net/stacks/46][color=#4BB1DF][b]TBS Wonderful[/b][/color][/url] anime',
+      '(79) Watch an anime that has a higher score than a listed Adaptation under Related Anime',
     description:
-      '(79) Watch a listed <a href="https://myanimelist.net/stacks/45">Animeism</a>, <a href="https://myanimelist.net/stacks/7">NUMAnimation</a> or <a href="https://myanimelist.net/stacks/46">TBS Wonderful</a> anime',
+      '(79) Watch an anime that has a higher score than a listed Adaptation under Related Anime',
     addlInfo: [],
-    defaultExtraInfo: 'List Used: ',
-    minigames: ['Duck Pond'],
-    validators: [validateStack(STACK_79)],
+    defaultExtraInfo: ['Anime Score:', 'Adaptation Score:'],
+    courses: [Main.FishAndChips, Main.Lasagna, Main.Omurice, Main.Spaghetti],
+    validators: [],
+    manualValidators: ['Anime has a higher score than a listed adaptation'],
   },
   '80': {
-    bbCode:
-      '(80) Watch a listed [url=https://myanimelist.net/stacks/27][color=#4BB1DF][b]Anisata[/b][/color][/url], [url=https://myanimelist.net/stacks/20][color=#4BB1DF][b]AnichU[/b][/color][/url], [url=https://myanimelist.net/stacks/79][color=#4BB1DF][b]Doroku[/b][/color][/url], [url=https://myanimelist.net/stacks/47][color=#4BB1DF][b]Ultra Super Anime Time[/b][/color][/url], or [url=https://myanimelist.net/stacks/3][color=#4BB1DF][b]+Ultra[/b][/color][/url] anime',
-    description:
-      '(80) Watch a listed <a href="https://myanimelist.net/stacks/27">Anisata</a>, <a href="https://myanimelist.net/stacks/20">AnichU</a>, <a href="https://myanimelist.net/stacks/79">Doroku</a>, <a href="https://myanimelist.net/stacks/47">Ultra Super Anime Time</a>, or <a href="https://myanimelist.net/stacks/3">+Ultra</a> anime',
+    bbCode: '(80) Watch an anime with a popularity lower than #500',
+    description: '(80) Watch an anime with a popularity lower than #500',
     addlInfo: [],
-    defaultExtraInfo: 'List Used: ',
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [validateStack(STACK_80)],
+    defaultExtraInfo: ['Popularity When Started:'],
+    courses: [Drink.Coffee, Drink.Lemonade, Drink.Soda, Drink.Tea],
+    validators: [validatePopularity(500, 'gt')],
+    manualValidators: [],
   },
   '81': {
-    bbCode: `(81) Watch an anime by a studio with less than 35 anime in MAL's database`,
-    description:
-      "(81) Watch an anime by a studio with less than 35 anime in MAL's database",
-    addlInfo: [
-      '- If there are multiple studios listed, only one of them needs to be valid',
-    ],
-    defaultExtraInfo: 'Studio: ',
-    minigames: ['Bingo 21A', 'Bingo 21B'],
-    validators: [],
+    bbCode: '(81) Watch an anime with a popularity lower than #2026',
+    description: '(81) Watch an anime with a popularity lower than #2026',
+    addlInfo: [],
+    defaultExtraInfo: ['Popularity When Started:'],
+    courses: [Side.Fries, Side.GarlicBread, Side.Onigiri, Side.TheMelon],
+    validators: [validatePopularity(2026, 'gt')],
+    manualValidators: [],
   },
   '82': {
-    bbCode: `(82) Watch an anime by a studio you haven't seen anything from (studio cannot be listed as producer)`,
-    description:
-      "(82) Watch an anime by a studio you haven't seen anything from (studio cannot be listed as producer)",
-    addlInfo: [
-      '- If you have an anime from the chosen studio on your Completed/Watching/On Hold/Dropped list, you <em>cannot</em> use that studio',
-      '- If there are multiple studios listed, only one of them needs to be valid',
+    bbCode: '(82) Watch an anime with a popularity lower than #3211',
+    description: '(82) Watch an anime with a popularity lower than #3211',
+    addlInfo: [],
+    defaultExtraInfo: ['Popularity When Started:'],
+    courses: [
+      Main.Burger,
+      Main.FishAndChips,
+      Main.Omurice,
+      Main.Sandwich,
+      Main.Spaghetti,
+      Main.Sushi,
     ],
-    defaultExtraInfo: 'Studio: ',
-    minigames: ['Whack-a-Mole B'],
-    validators: [],
+    validators: [validatePopularity(3211, 'gt')],
+    manualValidators: [],
   },
   '83': {
-    bbCode: `(83) Watch an anime listed on a 2025 AWC participant's [url=https://anime.plus][color=#4BB1DF][b]Anime+[/b][/color][/url] recommendations and provide a screenshot that includes their username`,
-    description: `(83) Watch an anime listed on a 2025 AWC participant's <a href="https://anime.plus">Anime+</a> recommendations and provide a screenshot that includes their username`,
+    bbCode: '(83) Watch an anime with a popularity lower than #4015',
+    description: '(83) Watch an anime with a popularity lower than #4015',
     addlInfo: [],
-    defaultExtraInfo: 'AWC Participant: | Post Link: | Screenshot: ',
-    minigames: ['Whack-a-Mole B'],
-    validators: [],
+    defaultExtraInfo: ['Popularity When Started:'],
+    courses: [Starter.Prawns, Starter.SpringRolls],
+    validators: [validatePopularity(4015, 'gt')],
+    manualValidators: [],
   },
   '84': {
     bbCode:
-      '(84) Watch an anime suggested to you by [b]MAL[/b] or by [url=https://anime.plus][color=#4BB1DF][b]Anime+[/b][/color][/url] and provide a [url=https://myanimelist.net/forum/?goto=post&topicid=1869539&id=68336127][color=#4BB1DF][b]screenshot[/b][/color][/url] including your username',
+      '(84) Watch an anime with the numbers "2" or "6" in the score when you started watching it',
     description:
-      '(84) Watch an anime suggested to you by <a href="https://myanimelist.net/anime.php">MAL</a> or by <a href="https://anime.plus">Anime+</a> and provide a <a href="https://myanimelist.net/forum/?goto=post&topicid=1869539&id=68336127">screenshot</a> including your username',
+      '(84) Watch an anime with the numbers "2" or "6" in the score when you started watching it',
     addlInfo: [],
-    defaultExtraInfo: 'Screenshot: ',
-    minigames: ['Darts'],
-    validators: [],
+    defaultExtraInfo: ['Score Screenshot:'],
+    courses: [Drink.Lemonade, Drink.Tea],
+    validators: [validateScoreContains(['2', '6'])],
+    manualValidators: [],
   },
   '85': {
     bbCode:
-      '(85) Watch an anime from your most watched studio [url=https://i.imgur.com/5AwczTi.png][color=#9068D4][b]sorted by time[/b][/color][/url] on [url=https://anime.plus/][color=#4BB1DF][b]Anime+[/b][/color][/url] that has a MAL rating of less than 8.0 (screenshot must show username)',
+      '(85) Watch an anime with a score of 7.85 or above when you started watching it',
     description:
-      '(85) Watch an anime from your most watched studio <a href="https://i.imgur.com/5AwczTi.png">sorted by time</a> on <a href="https://anime.plus/">Anime+</a> that has a MAL rating of less than 8.0 (screenshot must show username)',
-    addlInfo: [
-      '- On Anime+ under Anime Favorites, sort Favorite Studios by Time, from highest to lowest',
-      '- The studio must be listed as the <em>studio</em> not the producer',
-      '- Anime can have two or more studios listed as long as one of them is your most watched',
-    ],
-    defaultExtraInfo:
-      'Most Watched Studio By Time: | Anime Rating: | Anime+ Screenshot: ',
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [],
+      '(85) Watch an anime with a score of 7.85 or above when you started watching it',
+    addlInfo: [],
+    defaultExtraInfo: ['Score When Started:'],
+    courses: [Main.FishAndChips, Main.Lasagna, Main.Sandwich, Main.Spaghetti],
+    validators: [validateScore(7.85, 'gte')],
+    manualValidators: [],
   },
   '86': {
     bbCode:
-      '(86) Watch an anime tagged with your lowest scored genre/theme/demographic sorted by [url=https://i.imgur.com/pxvV3w2.png][color=#9068D4][b]Mean[/b][/color][/url] according to [url=https://anime.plus/][color=#4BB1DF][b]Anime+[/b][/color][/url] (screenshot must show username)',
+      '(86) Watch an anime with a score of 7.50 or below when you started watching it',
     description:
-      '(86) Watch an anime tagged with your lowest scored genre/theme/demographic sorted by <a href="https://i.imgur.com/pxvV3w2.png">Mean</a> according to <a href="https://anime.plus/">Anime+</a> (screenshot must show username)',
-    addlInfo: [
-      '- On Anime+ under Anime Favorites, sort Favorite Genres by Mean watched (the "M" column), from lowest to highest',
-      '- Hentai and Erotica CAN be skipped, but make note of it',
-    ],
-    defaultExtraInfo: 'Lowest Scored by Mean: | Screenshot: ',
-    minigames: ['Whack-a-Mole B'],
-    validators: [],
+      '(86) Watch an anime with a score of 7.50 or below when you started watching it',
+    addlInfo: [],
+    defaultExtraInfo: ['Score When Started:'],
+    courses: [Drink.Coffee, Drink.Soda],
+    validators: [validateScore(7.5, 'lte')],
+    manualValidators: [],
   },
   '87': {
     bbCode:
-      '(87) Watch an anime [url=https://i.imgur.com/JSiadIO.png][color=#9068D4][b]Recommended[/b][/color][/url] to one of the Anime listed in your MAL Favorites (favorite anime must have been completed before item is started)',
+      '(87) Watch an anime with a score of 6.26 or below when you started watching it',
     description:
-      '(87) Watch an anime <a href="https://i.imgur.com/JSiadIO.png">Recommended</a> to one of the Anime listed in your MAL Favorites (favorite anime must have been completed before item is started)',
+      '(87) Watch an anime with a score of 6.26 or below when you started watching it',
     addlInfo: [],
-    defaultExtraInfo: 'Favorite Anime: ',
-    minigames: ['Darts'],
-    validators: [],
+    defaultExtraInfo: ['Score When Started:'],
+    courses: [Side.TheMelon, Side.Tofu],
+    validators: [validateScore(6.26, 'lte')],
+    manualValidators: [],
   },
   '88': {
     bbCode:
-      '(88) Watch an anime in which one of the [url=https://i.imgur.com/pSal4Hc.png][color=#9068D4][b]People[/b][/color][/url] listed in your MAL Favorites participated',
+      '(88) Watch an anime that is listed under [url=https://anidb.net/tag/6118][b]Eating Ramen[/b][/url], [url=https://anidb.net/tag/6100][b]Barbecue[/b][/url], or [url=https://anidb.net/tag/3233][b]Cooking Curry[/b][/url] on AniDB',
     description:
-      '(88) Watch an anime in which one of the <a href="https://i.imgur.com/pSal4Hc.png">People</a> listed in your MAL Favorites participated',
-    addlInfo: [
-      '- Person must be listed on your profile under People; they can be a voice actor/actress, director, original creator, musical artist, etc.',
-    ],
-    defaultExtraInfo: 'Favorite Person: ',
-    minigames: ['Plinko Tier 1'],
+      '(88) Watch an anime that is listed under <a href="https://anidb.net/tag/6118">Eating Ramen</a>, <a href="https://anidb.net/tag/6100">Barbecue</a>, or <a href="https://anidb.net/tag/3233">Cooking Curry</a> on AniDB',
+    addlInfo: [],
+    defaultExtraInfo: ['List Used:'],
+    courses: [Side.OnionRings],
     validators: [],
+    manualValidators: ['Anime is listed under specified tags'],
   },
   '89': {
     bbCode:
-      '(89) Finish an anime that you watched at least one episode of and [url=https://i.imgur.com/saKdbmU.png][color=#9068D4][b]dropped/put on hold[/b][/color][/url] September 30, 2024 or earlier (Alternatively: watch something from the listed provided by the [url=https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68342156][color=#4BB1DF][b]AWCC/MRCC Staff[/b][/color][/url])',
+      '(89) Watch an anime that has an [url=https://www.anime-planet.com/characters/tags/inanimate-objects][b]Inanimate Object[/b][/url] as a character',
     description:
-      '(89) Finish an anime that you watched at least one episode of and <a href="https://i.imgur.com/saKdbmU.png">dropped/put on hold</a> September 30, 2024 or earlier (Alternatively: watch something from the listed provided by the <a href="https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68342156">AWCC/MRCC Staff</a>)',
+      '(89) Watch an anime that has an <a href="https://www.anime-planet.com/characters/tags/inanimate-objects">Inanimate Object</a> as a character',
     addlInfo: [
-      '- The anime needs to have more than one episode and you must have watched at least one episode previously',
+      '— The character must be listed on Anime Planet in order to be valid, it does not have to be listed on MAL',
     ],
-    defaultExtraInfo:
-      'Original Anime Start Date:  | Last Watched Episode Date:  | Episodes Previously Watched:  | Screenshot: ',
-    minigames: ['Bingo 17B'],
+    defaultExtraInfo: ['Character:'],
+    courses: [Starter.ChickenWings, Starter.Soup, Starter.SpringRolls],
     validators: [],
+    manualValidators: ['Anime has a character with specified tag'],
   },
   '90': {
-    bbCode:
-      '(90) Watch an anime that has no Opening Theme and no Ending Theme listed (anime must have finished airing before you started it)',
-    description:
-      '(90) Watch an anime that has no Opening Theme and no Ending Theme listed (anime must have finished airing before you started it)',
-    addlInfo: [
-      '- The anime cannot have an Opening Theme and it <u>also</u> cannot have an Ending Theme',
-    ],
-    minigames: ['Tarot Route 2.2', 'Tarot Route 3.2'],
-    validators: [validateSongCountEquals(0, 0), validateFinishedAiring()],
+    bbCode: '(90) Watch an anime that only has one main character',
+    description: '(90) Watch an anime that only has one main character',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Side.GarlicBread, Side.TheMelon],
+    validators: [validateMainCharacterCountEquals(1)],
+    manualValidators: [],
   },
   '91': {
-    bbCode:
-      '(91) Watch an anime that has only one Opening Theme and one Ending Theme listed (anime must have at least 20 episodes)',
-    description:
-      '(91) Watch an anime that has only one Opening Theme and one Ending Theme listed (anime must have at least 20 episodes)',
-    addlInfo: [
-      '- Cannot have 1 OP and 0 ED; cannot have 0 OP and 1 ED; must have <em>exactly</em> one of each',
+    bbCode: '(91) Watch an anime with 8 or more main characters',
+    description: '(91) Watch an anime with 8 or more main characters',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [
+      Main.Burger,
+      Main.Omurice,
+      Main.Pizza,
+      Main.Spaghetti,
+      Main.Sushi,
     ],
-    minigames: ['Bingo 21B'],
-    validators: [
-      validateSongCountEquals(1, 1),
-      validateEpisodeCount(20, 'gte'),
-    ],
+    validators: [validateMainCharacterCountAtLeast(8)],
+    manualValidators: [],
   },
   '92': {
     bbCode:
-      '(92) Watch an anime with either 5 or more [url=https://i.imgur.com/cUWrDzH.png][color=#9068D4][b]Opening Themes[/b][/color][/url] listed or 5 or more [url=https://i.imgur.com/Q8YLfHS.png][color=#9068D4][b]Ending Themes[/b][/color][/url] listed',
+      '(92) Watch an anime that has more main characters than supporting characters',
     description:
-      '(92) Watch an anime with either 5 or more <a href="https://i.imgur.com/cUWrDzH.png">Opening Themes</a> listed or 5 or more <a href="https://i.imgur.com/Q8YLfHS.png">Ending Themes</a> listed',
-    addlInfo: [
-      '- It must at least 5 Opening Theme songs <em>or</em> at least 5 Ending Theme songs',
-      "- Example: 2 OP and 5 ED, 6 OP and 1 ED, 5 OP and 5 ED; it can't be 2 OP and 3 ED",
-    ],
-    minigames: ['Bingo 21A'],
-    validators: [validateSongCountAtLeast(5, 5)],
+      '(92) Watch an anime that has more main characters than supporting characters',
+    addlInfo: [],
+    defaultExtraInfo: ['# of Mains:', '# of Supporting:'],
+    courses: [Dessert.IceCream],
+    validators: [validateMoreMainThanSupporting()],
+    manualValidators: [],
   },
   '93': {
     bbCode:
-      '(93) Watch an anime in which 2 or more Opening Theme (OP) and/or Ending Theme (ED) are performed by the same [url=https://i.imgur.com/C7WTQNA.png][color=#9068D4][b]Artist/Group[/b][/color][/url] (must be two different songs)',
+      '(93) Watch an anime with 3+ main characters that are of the same gender',
     description:
-      '(93) Watch an anime in which 2 or more Opening Theme (OP) and/or Ending Theme (ED) are performed by the same <a href="https://i.imgur.com/C7WTQNA.png">Artist/Group</a> (must be two different songs)',
-    addlInfo: [
-      '- Must be <u>two different songs</u>; can be 2 OP, 2 ED, 1 OP+1 ED, etc.',
-      '- The artist/group can collaborate with others; for example: in Cowboy Bebop The Seatbelts are credited for the OP "Tank!" and ED #1 "The Real Folk Blues" featuring Mai Yamane',
+      '(93) Watch an anime with 3+ main characters that are of the same gender',
+    addlInfo: [],
+    defaultExtraInfo: [''],
+    courses: [
+      Main.Burger,
+      Main.FishAndChips,
+      Main.Lasagna,
+      Main.Omurice,
+      Main.Sandwich,
     ],
-    defaultExtraInfo: 'Artist/Group: ',
-    minigames: ['Tarot Route 2.1', 'Tarot Route 3.1', 'Tarot Route 3.2'],
     validators: [],
+    manualValidators: ['Anime has >=3 main characters of the same gender'],
   },
   '94': {
     bbCode:
-      '(94) Watch an anime featuring a Voice Actor (main or supporting character) who is also credited with a [url=https://i.imgur.com/1Imalpv.png][color=#9068D4][b]Theme/Insert Song Performance[/b][/color][/url] in the anime',
+      '(94) Watch an anime where the same Voice Actor is credited under at least two different characters',
     description:
-      '(94) Watch an anime featuring a Voice Actor (main or supporting character) who is also credited with a <a href="https://i.imgur.com/1Imalpv.png">Theme/Insert Song Performance</a> in the anime',
+      '(94) Watch an anime where the same Voice Actor is credited under at least two different characters',
     addlInfo: [
-      "- If the voice actor/actress is credited under their band's name it will not be valid; for example: Kishou Taniyama must be credited with a Theme/Insert Song Performance in the anime instead of GRANRODEO",
+      "— The voice actor/actress must be listed on the anime's Characters and Staff page next to both characters",
     ],
-    defaultExtraInfo: 'Voice Actor: ',
-    minigames: ['Plinko Tier 3'],
+    defaultExtraInfo: ['Voice Actor 1:', 'Character 1:', 'Character 2:'],
+    courses: [Starter.ChickenWings, Starter.Salad],
     validators: [],
+    manualValidators: ['Anime has VA credited under >=2 different characters'],
   },
   '95': {
     bbCode:
-      '(95) Watch an anime tagged with [b]Kids[/b] (total duration must be at least 16 minutes)',
+      '(95) Watch an anime that has a main character with majority blue, green, pink, or purple [url=https://anidb.net/tag/12/chartb][b]hair color[/b][/url]',
     description:
-      '(95) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/15">Kids</a> (total duration must be at least 16 minutes)',
-    addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [validateRuntime(16, 'gte'), validateTags(['Kids'], 1)],
+      '(95) Watch an anime that has a main character with majority blue, green, pink, or purple <a href="https://anidb.net/tag/12/chartb">hair color</a>',
+    addlInfo: [
+      "— The character's hair must be mostly one or several of the listed colors; just streaks are not valid",
+      '— The character can have a combination of the listed hair colors, as long as the listed hair colors make up the majority of their hair',
+    ],
+    defaultExtraInfo: ['Character:'],
+    courses: [
+      Starter.ChickenWings,
+      Starter.Prawns,
+      Starter.Soup,
+      Starter.SpringRolls,
+    ],
+    validators: [],
+    manualValidators: [
+      'Main character has majority blue, green, pink, or purple hair',
+    ],
   },
   '96': {
-    bbCode: '(96) Watch an anime tagged with [b]Music[/b]',
+    bbCode:
+      '(96) Watch an anime with a main character tagged with [url=https://www.anime-planet.com/characters/all?sort=title&order=asc&include_tags=341][b]Big Eaters[/b][/url] on Anime Planet',
     description:
-      '(96) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/19">Music</a>',
+      '(96) Watch an anime with a main character tagged with <a href="https://www.anime-planet.com/characters/all?sort=title&order=asc&include_tags=341">Big Eaters</a> on Anime Planet',
     addlInfo: [],
-    minigames: ['Darts'],
-    validators: [validateTags(['Music'], 1)],
+    defaultExtraInfo: [],
+    courses: [Dessert.IceCream],
+    validators: [],
+    manualValidators: ['Anime has a main character with specified tag'],
   },
   '97': {
     bbCode:
-      '(97) Watch an anime tagged with [b]School[/b] (total duration must be at least 16 minutes)',
+      '(97) Watch an anime in which a character wears [url=https://anidb.net/tag/2206][b]glasses[/b][/url]',
     description:
-      '(97) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/23">School</a> (total duration must be at least 16 minutes)',
-    addlInfo: [],
-    minigames: ['Plinko Tier 1'],
-    validators: [validateRuntime(16, 'gte'), validateTags(['School'], 1)],
+      '(97) Watch an anime in which a character wears <a href="https://anidb.net/tag/2206">glasses</a>',
+    addlInfo: [
+      "— The character does not have to be in the linked list, but it's a good place to start",
+    ],
+    defaultExtraInfo: ['Character:'],
+    courses: [
+      Main.Burger,
+      Main.FishAndChips,
+      Main.Omurice,
+      Main.Spaghetti,
+      Main.Sushi,
+    ],
+    validators: [],
+    manualValidators: ['Anime has a character who wears glasses'],
   },
   '98': {
     bbCode:
-      '(98) Watch an anime tagged with either [b]Adult Cast[/b] or [b]Supernatural[/b] (each episode must be at least 16 minutes)',
+      '(98) Watch an anime that is made by a Studio/Producer that starts with a letter in your MAL username',
     description:
-      '(98) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/50">Adult Cast</a> or <a href="https://myanimelist.net/anime/genre/37">Supernatural</a> (each episode must be at least 16 minutes)',
-    addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateTags(['Adult Cast', 'Supernatural'], 1),
+      '(98) Watch an anime that is made by a Studio/Producer that starts with a letter in your MAL username',
+    addlInfo: ['— The anime can have more than one Studio/Producer'],
+    defaultExtraInfo: ['Studio/Producer:'],
+    courses: [Side.Onigiri, Side.TheMelon, Side.Tofu],
+    validators: [validateStudioProducerStartInUsername()],
+    manualValidators: [
+      'Anime is made by a Studio/Producer starting with same letter as your MAL username',
     ],
   },
   '99': {
     bbCode:
-      '(99) Watch an anime tagged with either [b]Anthropomorphic[/b] or [b]Avant Garde[/b] (each episode must be at least 16 minutes)',
+      "(99) Watch an anime by a studio with less than 45 anime in MAL's database",
     description:
-      '(99) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/51">Anthropomorphic</a> or <a href="https://myanimelist.net/anime/genre/5">Avant Garde</a> (each episode must be at least 16 minutes)',
-    addlInfo: [],
-    minigames: ['Bingo 17A'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateTags(['Anthropomorphic', 'Avant Garde'], 1),
+      "(99) Watch an anime by a studio with less than 45 anime in MAL's database",
+    addlInfo: [
+      '— If there are multiple studios listed, only one of them needs to be valid',
     ],
+    defaultExtraInfo: ['Studio:'],
+    courses: [Main.FishAndChips, Main.Sushi],
+    validators: [],
+    manualValidators: ['Anime by studio with <45 anime'],
   },
   '100': {
     bbCode:
-      '(100) Watch an anime tagged with either [b]Historical[/b] or [b]Horror[/b] (each episode must be at least 16 minutes)',
+      "(100) Watch an anime by a studio you haven't seen anything from (studio cannot be listed as producer)",
     description:
-      '(100) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/13">Historical</a> or <a href="https://myanimelist.net/anime/genre/14">Horror</a> (each episode must be at least 16 minutes)',
-    addlInfo: [],
-    minigames: ['Tarot Route 2', 'Tarot Route 3'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateTags(['Historical', 'Horror'], 1),
+      "(100) Watch an anime by a studio you haven't seen anything from (studio cannot be listed as producer)",
+    addlInfo: [
+      '— If you have an anime from the chosen studio on your Completed/Watching/On Hold/Dropped list, you cannot use that studio',
+      '— If there are multiple studios listed, only one of them needs to be valid',
     ],
+    defaultExtraInfo: ['Studio:'],
+    courses: [Starter.Gyoza],
+    validators: [],
+    manualValidators: ["Anime by studio you haven't seen anything from"],
   },
   '101': {
     bbCode:
-      '(101) Watch an anime tagged with either [b]Mecha[/b] or [b]Super Power[/b] (each episode must be at least 16 minutes)',
+      '(101) Watch an anime that is from a Licensor/Producer/Studio starting with A',
     description:
-      '(101) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/18">Mecha</a> or <a href="https://myanimelist.net/anime/genre/31">Super Power</a> (each episode must be at least 16 minutes)',
+      '(101) Watch an anime that is from a Licensor/Producer/Studio starting with A',
     addlInfo: [],
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateTags(['Mecha', 'Super Power'], 1),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Dessert.ApplePie, Dessert.Dango],
+    validators: [validateCompanyStartsWith(['A'])],
+    manualValidators: [],
   },
   '102': {
     bbCode:
-      '(102) Watch an anime tagged with either [b]Military[/b] or [b]Sports[/b] (each episode must be at least 16 minutes)',
+      '(102) Watch an anime that is from a Licensor/Producer/Studio starting with S',
     description:
-      '(102) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/38">Military</a> or <a href="https://myanimelist.net/anime/genre/30">Sports</a> (each episode must be at least 16 minutes)',
+      '(102) Watch an anime that is from a Licensor/Producer/Studio starting with S',
     addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateTags(['Military', 'Sports'], 1),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Side.Fries],
+    validators: [validateCompanyStartsWith(['S'])],
+    manualValidators: [],
   },
   '103': {
     bbCode:
-      '(103) Watch an anime tagged with either [b]Mystery[/b] or [b]Parody[/b] (each episode must be at least 16 minutes)',
+      '(103) Watch an anime that is from a Licensor/Producer/Studio starting with T',
     description:
-      '(103) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/7">Mystery</a> or <a href="https://myanimelist.net/anime/genre/20">Parody</a> (each episode must be at least 16 minutes)',
+      '(103) Watch an anime that is from a Licensor/Producer/Studio starting with T',
     addlInfo: [],
-    minigames: ['Tarot Route 1'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateTags(['Mystery', 'Parody'], 1),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Side.Fries, Side.GarlicBread, Side.OnionRings, Side.Tofu],
+    validators: [validateCompanyStartsWith(['T'])],
+    manualValidators: [],
   },
   '104': {
     bbCode:
-      '(104) Watch an anime tagged with either [b]Mythology[/b] or [b]Seinen[/b] (each episode must be at least 16 minutes)',
+      '(104) Watch an anime that is from a Licensor/Producer/Studio starting with B or O',
     description:
-      '(104) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/6">Mythology</a> or <a href="https://myanimelist.net/anime/genre/42">Seinen</a> (each episode must be at least 16 minutes)',
+      '(104) Watch an anime that is from a Licensor/Producer/Studio starting with B or O',
     addlInfo: [],
-    minigames: ['Whack-a-Mole C'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateTags(['Mythology', 'Seinen'], 1),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Starter.Prawns, Starter.Salad, Starter.Soup],
+    validators: [validateCompanyStartsWith(['B', 'O'])],
+    manualValidators: [],
   },
   '105': {
     bbCode:
-      '(105) Watch an anime tagged with either [b]Slice of Life[/b] or [b]Team Sports[/b] (each episode must be at least 16 minutes)',
+      '(105) Watch an anime that is from a Licensor/Producer/Studio starting with D or R',
     description:
-      '(105) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/36">Slice of Life</a> or <a href="https://myanimelist.net/anime/genre/77">Team Sports</a> (each episode must be at least 16 minutes)',
+      '(105) Watch an anime that is from a Licensor/Producer/Studio starting with D or R',
     addlInfo: [],
-    minigames: ['Plinko Tier 2'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateTags(['Slice of Life', 'Team Sports'], 1),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Main.Burger, Main.FishAndChips, Main.Sushi],
+    validators: [validateCompanyStartsWith(['D', 'R'])],
+    manualValidators: [],
   },
   '106': {
     bbCode:
-      '(106) Watch an anime tagged with at least ONE of the following: [b]Ecchi[/b], [b]Erotica[/b], [b]Hentai[/b]',
+      '(106) Watch an anime that is from a Licensor/Producer/Studio starting with E or P',
     description:
-      '(106) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/9">Ecchi</a>, <a href="https://myanimelist.net/anime/genre/49">Erotica</a>, <a href="https://myanimelist.net/anime/genre/12">Hentai</a>',
+      '(106) Watch an anime that is from a Licensor/Producer/Studio starting with E or P',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Bingo 17A'],
-    validators: [validateTags(['Ecchi', 'Erotica', 'Hentai'], 1)],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Dessert.Cake],
+    validators: [validateCompanyStartsWith(['E', 'P'])],
+    manualValidators: [],
   },
   '107': {
     bbCode:
-      '(107) Watch an anime tagged with at least ONE of the following: [b]Award Winning[/b], [b]Crossdressing[/b], [b]Gore[/b], [b]Samurai[/b]',
+      '(107) Watch an anime that is from a Licensor/Producer/Studio starting with G or L',
     description:
-      '(107) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/46">Award Winning</a>, <a href="https://myanimelist.net/anime/genre/81">Crossdressing</a>, <a href="https://myanimelist.net/anime/genre/58">Gore</a>, <a href="https://myanimelist.net/anime/genre/21">Samurai</a>',
+      '(107) Watch an anime that is from a Licensor/Producer/Studio starting with G or L',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Whack-a-Mole C'],
-    validators: [
-      validateTags(['Award Winning', 'Crossdressing', 'Gore', 'Samurai'], 1),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Starter.Prawns, Starter.Soup],
+    validators: [validateCompanyStartsWith(['G', 'L'])],
+    manualValidators: [],
   },
   '108': {
     bbCode:
-      '(108) Watch an anime tagged with at least ONE of the following: [b]CGDCT[/b], [b]Medical[/b], [b]Racing[/b], [b]Strategy Game[/b]',
+      '(108) Watch an anime that is from a Licensor/Producer/Studio starting with H or I',
     description:
-      '(108) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/52">CGDCT</a>, <a href="https://myanimelist.net/anime/genre/67">Medical</a>, <a href="https://myanimelist.net/anime/genre/3">Racing</a>, <a href="https://myanimelist.net/anime/genre/11">Strategy Game</a>',
+      '(108) Watch an anime that is from a Licensor/Producer/Studio starting with H or I',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Plinko Tier 3'],
-    validators: [
-      validateTags(['CGDCT', 'Medical', 'Racing', 'Strategy Game'], 1),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Main.Sandwich, Main.Sushi],
+    validators: [validateCompanyStartsWith(['H', 'I'])],
+    manualValidators: [],
   },
   '109': {
     bbCode:
-      '(109) Watch an anime tagged with at least ONE of the following: [b]Boys Love[/b],  [b]Iyashikei[/b], [b]Mahou Shoujo[/b], [b]Urban Fantasy[/b]',
+      '(109) Watch an anime that is from a Licensor/Producer/Studio starting with M or X',
     description:
-      '(109) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/28">Boys Love</a>,  <a href="https://myanimelist.net/anime/genre/63">Iyashikei</a>, <a href="https://myanimelist.net/anime/genre/66">Mahou Shoujo</a>, <a href="https://myanimelist.net/anime/genre/82">Urban Fantasy</a>',
+      '(109) Watch an anime that is from a Licensor/Producer/Studio starting with M or X',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Bingo 17A'],
-    validators: [
-      validateTags(
-        ['Boys Love', 'Iyashikei', 'Mahou Shoujo', 'Urban Fantasy'],
-        1
-      ),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Starter.ChickenWings, Starter.Gyoza],
+    validators: [validateCompanyStartsWith(['M', 'X'])],
+    manualValidators: [],
   },
   '110': {
     bbCode:
-      '(110) Watch an anime tagged with at least ONE of the following: [b]Childcare[/b], [b]Gag Humor[/b], [b]Magical Sex Shift[/b], [b]Shoujo[/b]',
+      '(110) Watch an anime that is from a Licensor/Producer/Studio starting with C, Z, or a number/symbol',
     description:
-      '(110) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/53">Childcare</a>, <a href="https://myanimelist.net/anime/genre/57">Gag Humor</a>, <a href="https://myanimelist.net/anime/genre/65">Magical Sex Shift</a>, <a href="https://myanimelist.net/anime/genre/25">Shoujo</a>',
+      '(110) Watch an anime that is from a Licensor/Producer/Studio starting with C, Z, or a number/symbol',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Tarot Route 2', 'Tarot Route 3'],
-    validators: [
-      validateTags(
-        ['Childcare', 'Gag Humor', 'Magical Sex Shift', 'Shoujo'],
-        1
-      ),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Side.GarlicBread, Side.OnionRings, Side.Tofu],
+    validators: [validateCompanyStartsWith(['C', 'Z'], true)],
+    manualValidators: [],
   },
   '111': {
     bbCode:
-      '(111) Watch an anime tagged with at least ONE of the following: [b]Combat Sports[/b], [b]Idols (Male)[/b], [b]Psychological[/b], [b]Video Game[/b]',
+      '(111) Watch an anime that is from a Licensor/Producer/Studio starting with F, J, or Y',
     description:
-      '(111) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/54">Combat Sports</a>, <a href="https://myanimelist.net/anime/genre/61">Idols (Male)</a>, <a href="https://myanimelist.net/anime/genre/40">Psychological</a>, <a href="https://myanimelist.net/anime/genre/79">Video Game</a>',
+      '(111) Watch an anime that is from a Licensor/Producer/Studio starting with F, J, or Y',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Duck Pond'],
-    validators: [
-      validateTags(
-        ['Combat Sports', 'Idols (Male)', 'Psychological', 'Video Game'],
-        1
-      ),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Main.FishAndChips, Main.Lasagna, Main.Omurice, Main.Pizza],
+    validators: [validateCompanyStartsWith(['F', 'J', 'Y'])],
+    manualValidators: [],
   },
   '112': {
     bbCode:
-      '(112) Watch an anime tagged with at least ONE of the following: [b]Delinquents[/b], [b]Otaku Culture[/b], [b]Space[/b], [b]Villainess[/b]',
+      '(112) Watch an anime that is from a Licensor/Producer/Studio starting with K, Q, or U',
     description:
-      '(112) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/55">Delinquents</a>, <a href="https://myanimelist.net/anime/genre/69">Otaku Culture</a>, <a href="https://myanimelist.net/anime/genre/29">Space</a>, <a href="https://myanimelist.net/anime/genre/83">Villainess</a>',
+      '(112) Watch an anime that is from a Licensor/Producer/Studio starting with K, Q, or U',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Whack-a-Mole C'],
-    validators: [
-      validateTags(['Delinquents', 'Otaku Culture', 'Space', 'Villainess'], 1),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Starter.ChickenWings, Starter.SpringRolls],
+    validators: [validateCompanyStartsWith(['K', 'Q', 'U'])],
+    manualValidators: [],
   },
   '113': {
     bbCode:
-      '(113) Watch an anime tagged with at least ONE of the following: [b]Detective[/b], [b]Educational[/b], [b]Performing Arts[/b], [b]Reverse Harem[/b]',
+      '(113) Watch an anime that is from a Licensor/Producer/Studio starting with N, V, or W',
     description:
-      '(113) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/39">Detective</a>, <a href="https://myanimelist.net/anime/genre/56">Educational</a>, <a href="https://myanimelist.net/anime/genre/70">Performing Arts</a>, <a href="https://myanimelist.net/anime/genre/73">Reverse Harem</a>',
+      '(113) Watch an anime that is from a Licensor/Producer/Studio starting with N, V, or W',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Bingo 21B'],
-    validators: [
-      validateTags(
-        ['Detective', 'Educational', 'Performing Arts', 'Reverse Harem'],
-        1
-      ),
-    ],
+    defaultExtraInfo: ['Licensor/Producer/Studio:'],
+    courses: [Main.Lasagna, Main.Omurice, Main.Pizza, Main.Spaghetti],
+    validators: [validateCompanyStartsWith(['N', 'V', 'W'])],
+    manualValidators: [],
   },
   '114': {
     bbCode:
-      '(114) Watch an anime tagged with at least ONE of the following: [b]Girls Love[/b], [b]Love Polygon[/b], [b]Suspense[/b], [b]Vampire[/b]',
+      '(114) Watch an anime from [url=https://myanimelist.net/anime/producer/102][b]Funimation[/b][/url]',
     description:
-      '(114) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/26">Girls Love</a>, <a href="https://myanimelist.net/anime/genre/64">Love Polygon</a>, <a href="https://myanimelist.net/anime/genre/41">Suspense</a>, <a href="https://myanimelist.net/anime/genre/32">Vampire</a>',
+      '(114) Watch an anime from <a href="https://myanimelist.net/anime/producer/102">Funimation</a>',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Whack-a-Mole C'],
-    validators: [
-      validateTags(['Girls Love', 'Love Polygon', 'Suspense', 'Vampire'], 1),
-    ],
+    defaultExtraInfo: [],
+    courses: [Starter.ChickenWings, Starter.Soup],
+    validators: [validateCompany(['Funimation'])],
+    manualValidators: [],
   },
   '115': {
     bbCode:
-      '(115) Watch an anime tagged with at least ONE of the following: [b]Gourmet[/b], [b]Harem[/b], [b]Organized Crime[/b], [b]Showbiz[/b]',
+      '(115) Watch an anime from [url=https://myanimelist.net/anime/producer/111][b]NHK[/b][/url]',
     description:
-      '(115) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/47">Gourmet</a>, <a href="https://myanimelist.net/anime/genre/35">Harem</a>, <a href="https://myanimelist.net/anime/genre/68">Organized Crime</a>,  <a href="https://myanimelist.net/anime/genre/75">Showbiz</a>',
+      '(115) Watch an anime from <a href="https://myanimelist.net/anime/producer/111">NHK</a>',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Plinko Tier 2'],
-    validators: [
-      validateTags(['Gourmet', 'Harem', 'Organized Crime', 'Showbiz'], 1),
-    ],
+    defaultExtraInfo: [],
+    courses: [Side.Onigiri, Side.OnionRings],
+    validators: [validateCompany(['NHK'])],
+    manualValidators: [],
   },
   '116': {
     bbCode:
-      '(116) Watch an anime tagged with at least ONE of the following: [b]High Stakes Game[/b], [b]Love Status Quo[/b], [b]Martial Arts[/b], [b]Visual Arts[/b]',
+      '(116) Watch an anime from [url=https://myanimelist.net/anime/producer/97][b]ADV Films[/b][/url] or [url=https://myanimelist.net/anime/producer/376][b]Sentai Filmworks[/b][/url]',
     description:
-      '(116) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/59">High Stakes Game</a>, <a href="https://myanimelist.net/anime/genre/74">Love Status Quo</a>, <a href="https://myanimelist.net/anime/genre/17">Martial Arts</a>, <a href="https://myanimelist.net/anime/genre/80">Visual Arts</a>',
+      '(116) Watch an anime from <a href="https://myanimelist.net/anime/producer/97">ADV Films</a> or <a href="https://myanimelist.net/anime/producer/376">Sentai Filmworks</a>',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Duck Pond'],
-    validators: [
-      validateTags(
-        ['High Stakes Game', 'Love Status Quo', 'Martial Arts', 'Visual Arts'],
-        1
-      ),
-    ],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cookie],
+    validators: [validateCompany(['ADV Films', 'Sentai Filmworks'])],
+    manualValidators: [],
   },
   '117': {
     bbCode:
-      '(117) Watch an anime tagged with at least ONE of the following: [b]Idols (Female)[/b], [b]Josei[/b], [b]Pets[/b], [b]Workplace[/b]',
+      '(117) Watch an anime from [url=https://myanimelist.net/anime/producer/28][b]OLM[/b][/url] or [url=https://myanimelist.net/anime/producer/18][b]Toei Animation[/b][/url]',
     description:
-      '(117) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/60">Idols (Female)</a>, <a href="https://myanimelist.net/anime/genre/43">Josei</a>, <a href="https://myanimelist.net/anime/genre/71">Pets</a>, <a href="https://myanimelist.net/anime/genre/48">Workplace</a>',
+      '(117) Watch an anime from <a href="https://myanimelist.net/anime/producer/28">OLM</a> or <a href="https://myanimelist.net/anime/producer/18">Toei Animation</a>',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With: ',
-    minigames: ['Bingo 21A'],
-    validators: [
-      validateTags(['Idols (Female)', 'Josei', 'Pets', 'Workplace'], 1),
-    ],
+    defaultExtraInfo: [],
+    courses: [Main.FishAndChips, Main.Pizza, Main.Sandwich, Main.Spaghetti],
+    validators: [validateCompany(['OLM', 'Toei Animation'])],
+    manualValidators: [],
   },
   '118': {
     bbCode:
-      '(118) Watch an anime tagged with at least ONE of the following: [b]Isekai[/b], [b]Reincarnation[/b], [b]Survival[/b], [b]Time Travel[/b]',
+      '(118) Watch an anime from [url=https://myanimelist.net/anime/producer/17][b]Aniplex[/b][/url], [url=https://myanimelist.net/anime/producer/37][b]Studio Deen[/b][/url] or [url=https://myanimelist.net/anime/producer/1727][b]Tencent Video[/b][/url]',
     description:
-      '(118) Watch an anime tagged with at least ONE of the following: <a href="https://myanimelist.net/anime/genre/62">Isekai</a>, <a href="https://myanimelist.net/anime/genre/72">Reincarnation</a>, <a href="https://myanimelist.net/anime/genre/76">Survival</a>, <a href="https://myanimelist.net/anime/genre/78">Time Travel</a>',
+      '(118) Watch an anime from <a href="https://myanimelist.net/anime/producer/17">Aniplex</a>, <a href="https://myanimelist.net/anime/producer/37">Studio Deen</a> or <a href="https://myanimelist.net/anime/producer/1727">Tencent Video</a>',
     addlInfo: [],
-    minigames: ['Tarot Route 1'],
-    validators: [
-      validateTags(['Isekai', 'Reincarnation', 'Survival', 'Time Travel'], 1),
-    ],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza, Starter.Soup, Starter.SpringRolls],
+    validators: [validateCompany(['Aniplex', 'Studio Deen', 'Tencent Video'])],
+    manualValidators: [],
   },
   '119': {
     bbCode:
-      '(119) Watch an anime tagged with at least TWO of the following: [b]Action[/b], [b]Drama[/b], [b]Romance[/b], [b]Sci-Fi[/b]',
+      '(119) Watch an anime from [url=https://myanimelist.net/anime/producer/493][b]Aniplex of America[/b][/url], [url=https://myanimelist.net/anime/producer/1696][b]Kadokawa[/b][/url] or [url=https://myanimelist.net/anime/producer/10][b]Production I.G[/b][/url]',
     description:
-      '(119) Watch an anime tagged with at least TWO of the following: <a href="https://myanimelist.net/anime/genre/1">Action</a>, <a href="https://myanimelist.net/anime/genre/8">Drama</a>, <a href="https://myanimelist.net/anime/genre/22">Romance</a>, <a href="https://myanimelist.net/anime/genre/24">Sci-Fi</a>',
+      '(119) Watch an anime from <a href="https://myanimelist.net/anime/producer/493">Aniplex of America</a>, <a href="https://myanimelist.net/anime/producer/1696">Kadokawa</a> or <a href="https://myanimelist.net/anime/producer/10">Production I.G</a>',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With 1: | Tagged With 2: ',
-    minigames: ['Tarot Route 2.1', 'Tarot Route 2.2', 'Tarot Route 3'],
-    validators: [validateTags(['Action', 'Drama', 'Romance', 'Sci-Fi'], 2)],
+    defaultExtraInfo: [],
+    courses: [Drink.Lemonade],
+    validators: [
+      validateCompany(['Aniplex of America', 'Kadokawa', 'Production I.G']),
+    ],
+    manualValidators: [],
   },
   '120': {
     bbCode:
-      '(120) Watch an anime tagged with at least TWO of the following: [b]Adventure[/b], [b]Comedy[/b], [b]Fantasy[/b], [b]Shounen[/b]',
+      '(120) Watch an anime from [url=https://myanimelist.net/anime/producer/233][b]Bandai Entertainment[/b][/url], [url=https://myanimelist.net/anime/producer/467][b]Discotek Media[/b][/url] or [url=https://myanimelist.net/anime/producer/7][b]J.C.Staff[/b][/url]',
     description:
-      '(120) Watch an anime tagged with at least TWO of the following: <a href="https://myanimelist.net/anime/genre/2">Adventure</a>, <a href="https://myanimelist.net/anime/genre/4">Comedy</a>, <a href="https://myanimelist.net/anime/genre/10">Fantasy</a>, <a href="https://myanimelist.net/anime/genre/27">Shounen</a>',
+      '(120) Watch an anime from <a href="https://myanimelist.net/anime/producer/233">Bandai Entertainment</a>, <a href="https://myanimelist.net/anime/producer/467">Discotek Media</a> or <a href="https://myanimelist.net/anime/producer/7">J.C.Staff</a>',
     addlInfo: [],
-    defaultExtraInfo: 'Tagged With 1: | Tagged With 2: ',
-    minigames: ['Bingo 21A', 'Bingo 21B'],
+    defaultExtraInfo: [],
+    courses: [Starter.ChickenWings, Starter.Prawns],
     validators: [
-      validateTags(['Adventure', 'Comedy', 'Fantasy', 'Shounen'], 2),
+      validateCompany(['Bandai Entertainment', 'Discotek Media', 'J.C.Staff']),
     ],
+    manualValidators: [],
   },
   '121': {
     bbCode:
-      '(121) Watch an anime with a total duration of 16 minutes or more and tagged with 1 Genre or less (Themes/Demographics do not count)',
+      '(121) Watch an anime from [url=https://myanimelist.net/anime/producer/1414][b]bilibili[/b][/url], [url=https://myanimelist.net/anime/producer/169][b]Fuji TV[/b][/url] or [url=https://myanimelist.net/anime/producer/144][b]Pony Canyon[/b][/url]',
     description:
-      '(121) Watch an anime with a total duration of 16 minutes or more and tagged with 1 Genre or less (Themes/Demographics do not count)',
+      '(121) Watch an anime from <a href="https://myanimelist.net/anime/producer/1414">bilibili</a>, <a href="https://myanimelist.net/anime/producer/169">Fuji TV</a> or <a href="https://myanimelist.net/anime/producer/144">Pony Canyon</a>',
     addlInfo: [],
-    minigames: ['Whack-a-Mole C'],
-    validators: [validateRuntime(16, 'gte'), validateGenreCount(1, 'lte')],
+    defaultExtraInfo: [],
+    courses: [Starter.Salad, Starter.Soup, Starter.SpringRolls],
+    validators: [validateCompany(['bilibili', 'Fuji TV', 'Pony Canyon'])],
+    manualValidators: [],
   },
   '122': {
     bbCode:
-      '(122) Watch an anime with a total duration of 16 minutes or more and tagged with 3 Genres or more (Themes/Demographics do not count)',
+      '(122) Watch an anime from [url=https://myanimelist.net/anime/producer/23][b]Bandai Visual[/b][/url], [url=https://myanimelist.net/anime/producer/166][b]Movic[/b][/url] or [url=https://myanimelist.net/anime/producer/247][b]Shin-Ei Animation[/b][/url]',
     description:
-      '(122) Watch an anime with a total duration of 16 minutes or more and tagged with 3 Genres or more (Themes/Demographics do not count)',
+      '(122) Watch an anime from <a href="https://myanimelist.net/anime/producer/23">Bandai Visual</a>, <a href="https://myanimelist.net/anime/producer/166">Movic</a> or <a href="https://myanimelist.net/anime/producer/247">Shin-Ei Animation</a>',
     addlInfo: [],
-    minigames: ['Bingo 17A', 'Bingo 17B'],
-    validators: [validateRuntime(16, 'gte'), validateGenreCount(3, 'gte')],
+    defaultExtraInfo: [''],
+    courses: [Side.OnionRings],
+    validators: [
+      validateCompany(['Bandai Visual', 'Movic', 'Shin-Ei Animation']),
+    ],
+    manualValidators: [],
   },
   '123': {
     bbCode:
-      '(123) Watch an anime rated [url=https://i.imgur.com/d3NpdjE.png][color=#9068D4][b]G - All Ages or PG - Children[/b][/color][/url]',
+      '(123) Watch an anime from [url=https://myanimelist.net/anime/producer/276][b]DLE[/b][/url], [url=https://myanimelist.net/anime/producer/1365][b]Shueisha[/b][/url] or [url=https://myanimelist.net/anime/producer/14][b]Sunrise[/b][/url]',
     description:
-      '(123) Watch an anime rated <a href="https://i.imgur.com/d3NpdjE.png">G - All Ages or PG - Children</a>',
-    addlInfo: ['- Does NOT include anime rated PG-13 - Teens 13 or Older'],
-    minigames: ['Duck Pond'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateRating(['G - All Ages', 'PG - Children']),
-    ],
+      '(123) Watch an anime from <a href="https://myanimelist.net/anime/producer/276">DLE</a>, <a href="https://myanimelist.net/anime/producer/1365">Shueisha</a> or <a href="https://myanimelist.net/anime/producer/14">Sunrise</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie, Dessert.IceCream],
+    validators: [validateCompany(['DLE', 'Shueisha', 'Sunrise'])],
+    manualValidators: [],
   },
   '124': {
     bbCode:
-      '(124) Watch an anime rated [url=https://i.imgur.com/CtXjsQU.png][color=#9068D4][b]PG-13 - Teens 13 or older[/b][/color][/url] (total duration must be at least 16 minutes)',
+      '(124) Watch an anime from [url=https://myanimelist.net/anime/producer/104][b]Lantis[/b][/url], [url=https://myanimelist.net/anime/producer/11][b]Madhouse[/b][/url] or [url=https://myanimelist.net/anime/producer/145][b]TBS[/b][/url]',
     description:
-      '(124) Watch an anime rated <a href="https://i.imgur.com/CtXjsQU.png">PG-13 - Teens 13 or older</a> (total duration must be at least 16 minutes)',
-    addlInfo: ['- Does NOT include anime rated PG - Children'],
-    minigames: ['Plinko Tier 3'],
-    validators: [
-      validateRuntime(16, 'gte'),
-      validateRating(['PG-13 - Teens 13 or older']),
-    ],
+      '(124) Watch an anime from <a href="https://myanimelist.net/anime/producer/104">Lantis</a>, <a href="https://myanimelist.net/anime/producer/11">Madhouse</a> or <a href="https://myanimelist.net/anime/producer/145">TBS</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.FishAndChips, Main.Lasagna, Main.Pizza],
+    validators: [validateCompany(['Lantis', 'Madhouse', 'TBS'])],
+    manualValidators: [],
   },
   '125': {
     bbCode:
-      '(125) Watch an anime rated [url=https://i.imgur.com/SAMWoRq.png][color=#9068D4][b]R -17+ or R+ - Mild Nudity[/b][/color][/url] (total duration must be at least 16 minutes)',
+      '(125) Watch an anime from [url=https://myanimelist.net/anime/producer/1][b]Studio Pierrot[/b][/url], [url=https://myanimelist.net/anime/producer/103][b]Tatsunoko Production[/b][/url] or [url=https://myanimelist.net/anime/producer/16][b]TV Tokyo[/b][/url]',
     description:
-      '(125) Watch an anime rated <a href="https://i.imgur.com/SAMWoRq.png">R -17+ or R+ - Mild Nudity</a> (total duration must be at least 16 minutes)',
-    addlInfo: ['- Does NOT include anime rated Rx - Hentai'],
-    minigames: ['Whack-a-Mole E'],
+      '(125) Watch an anime from <a href="https://myanimelist.net/anime/producer/1">Studio Pierrot</a>, <a href="https://myanimelist.net/anime/producer/103">Tatsunoko Production</a> or <a href="https://myanimelist.net/anime/producer/16">TV Tokyo</a>',
+    addlInfo: [],
+    defaultExtraInfo: [''],
+    courses: [Main.Lasagna, Main.Sandwich, Main.Spaghetti],
     validators: [
-      validateRuntime(16, 'gte'),
-      validateRating(['R - 17+ (violence & profanity)', 'R+ - Mild Nudity']),
+      validateCompany(['Studio Pierrot', 'Tatsunoko Production', 'TV Tokyo']),
     ],
+    manualValidators: [],
   },
   '126': {
     bbCode:
-      '(126) Watch an anime adapted from a [b]Manga[/b] Source (total duration must be at least 16 minutes)',
+      '(126) Watch an anime from [url=https://myanimelist.net/anime/producer/56][b]A-1 Pictures[/b][/url], [url=https://myanimelist.net/anime/producer/238][b]AT-X[/b][/url], [url=https://myanimelist.net/anime/producer/1468][b]Crunchyroll[/b][/url] or [url=https://myanimelist.net/anime/producer/306][b]Magic Capsule[/b][/url]',
     description:
-      '(126) Watch an anime adapted from a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Manga.txt">Manga</a> Source (total duration must be at least 16 minutes)',
+      '(126) Watch an anime from <a href="https://myanimelist.net/anime/producer/56">A-1 Pictures</a>, <a href="https://myanimelist.net/anime/producer/238">AT-X</a>, <a href="https://myanimelist.net/anime/producer/1468">Crunchyroll</a> or <a href="https://myanimelist.net/anime/producer/306">Magic Capsule</a>',
     addlInfo: [],
-    minigames: ['Plinko Tier 1'],
-    validators: [validateRuntime(16, 'gte'), validateSource(['Manga'])],
+    defaultExtraInfo: [],
+    courses: [Drink.Lemonade],
+    validators: [
+      validateCompany(['A-1 Pictures', 'AT-X', 'Crunchyroll', 'Magic Capsule']),
+    ],
+    manualValidators: [],
   },
   '127': {
     bbCode:
-      '(127) Watch an anime adapted from an [b]Original[/b] Source (total duration must be at least 16 minutes)',
+      '(127) Watch an anime from [url=https://myanimelist.net/anime/producer/48][b]AIC[/b][/url], [url=https://myanimelist.net/anime/producer/113][b]Kadokawa Shoten[/b][/url], [url=https://myanimelist.net/anime/producer/73][b]TMS Entertainment[/b][/url] or [url=https://myanimelist.net/anime/producer/119][b]VIZ Media[/b][/url]',
     description:
-      '(127) Watch an anime adapted from an <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Original.txt">Original</a> Source (total duration must be at least 16 minutes)',
+      '(127) Watch an anime from <a href="https://myanimelist.net/anime/producer/48">AIC</a>, <a href="https://myanimelist.net/anime/producer/113">Kadokawa Shoten</a>, <a href="https://myanimelist.net/anime/producer/73">TMS Entertainment</a> or <a href="https://myanimelist.net/anime/producer/119">VIZ Media</a>',
     addlInfo: [],
-    minigames: ['Darts'],
-    validators: [validateRuntime(16, 'gte'), validateSource(['Original'])],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie, Dessert.Cake],
+    validators: [
+      validateCompany([
+        'AIC',
+        'Kadokawa Shoten',
+        'TMS Entertainment',
+        'VIZ Media',
+      ]),
+    ],
+    manualValidators: [],
   },
   '128': {
     bbCode:
-      '(128) Watch an anime adapted from an [b]Unknown[/b] Source (total duration must be at least 16 minutes)',
+      "(128) Watch an anime listed on a 2026 participant's Anime+ recommendations",
     description:
-      '(128) Watch an anime adapted from an <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Unknown.txt">Unknown</a> Source (total duration must be at least 16 minutes)',
+      "(128) Watch an anime listed on a 2026 participant's Anime+ recommendations",
     addlInfo: [],
-    minigames: ['Tarot Route 3'],
-    validators: [validateRuntime(16, 'gte'), validateSource(['Unknown'])],
+    defaultExtraInfo: ['Participant:', 'Their Post Link:', 'Screenshot:'],
+    courses: [Main.Burger, Main.Omurice, Main.Pizza, Main.Sandwich],
+    validators: [],
+    manualValidators: ["Anime on participant's recommendations"],
   },
   '129': {
     bbCode:
-      '(129) Watch an anime adapted from a [b]4-koma Manga[/b] or [b]Music[/b] Source',
+      '(129) Watch an anime suggested to you by MAL or by Anime+ and provide a [url=https://myanimelist.net/forum/?goto=post&topicid=1869539&id=68336127][b]screenshot[/b][/url] including your username',
     description:
-      '(129) Watch an anime adapted from a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/4-koma%20Manga.txt">4-koma Manga</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Music.txt">Music</a> Source',
+      '(129) Watch an anime suggested to you by MAL or by Anime+ and provide a <a href="https://myanimelist.net/forum/?goto=post&topicid=1869539&id=68336127">screenshot</a> including your username',
     addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [validateSource(['4-koma Manga', 'Music'])],
+    defaultExtraInfo: ['Screenshot Showing Username:'],
+    courses: [Starter.ChickenWings, Starter.Gyoza, Starter.Soup],
+    validators: [],
+    manualValidators: ['Anime suggested by MAL or Anime+'],
   },
   '130': {
     bbCode:
-      '(130) Watch an anime adapted from a [b]Book[/b] or [b]Light Novel[/b] Source',
+      '(130) Watch an anime from one of your 5 lowest ranked studios sorted by Mean on Anime+',
     description:
-      '(130) Watch an anime adapted from a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Book.txt">Book</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Light%20Novel.txt">Light Novel</a> Source',
-    addlInfo: [],
-    minigames: ['Duck Pond'],
-    validators: [validateSource(['Book', 'Light Novel'])],
+      '(130) Watch an anime from one of your 5 lowest ranked studios sorted by Mean on Anime+',
+    addlInfo: [
+      '— On Anime+ under Anime Favorites, sort Favorite Studios by Mean, from lowest to highest',
+      '— Anime can have two or more studios listed',
+    ],
+    defaultExtraInfo: ['Screenshot:', 'Lowest Ranked Studios:'],
+    courses: [Main.Sushi],
+    validators: [],
+    manualValidators: ['Anime from applicable studios'],
   },
   '131': {
     bbCode:
-      '(131) Watch an anime adapted from a [b]Card Game[/b] or [b]Other[/b] Source',
+      '(131) Watch an anime tagged with your lowest scored genre/theme/demographic sorted by Mean according to Anime+',
     description:
-      '(131) Watch an anime adapted from a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Card%20Game.txt">Card Game</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Other.txt">Other</a> Source',
-    addlInfo: [],
-    minigames: ['Bingo 17B'],
-    validators: [validateSource(['Card Game', 'Other'])],
+      '(131) Watch an anime tagged with your lowest scored genre/theme/demographic sorted by Mean according to Anime+',
+    addlInfo: [
+      '— On Anime+ under Anime Favorites, sort Favorite Genres by Mean (the "M" column) from lowest to highest',
+      "— If two categories are rated the same use the one at the very top if you've sorted with lowest on top, or the one at the very bottom if you've sorted with lowest at the bottom",
+      '— Hentai and Erotica CAN be skipped, but make note of it',
+    ],
+    defaultExtraInfo: [],
+    courses: [Main.Sandwich],
+    validators: [],
+    manualValidators: ['Anime tagged with lowest scored by mean'],
   },
   '132': {
     bbCode:
-      '(132) Watch an anime adapted from a [b]Game[/b] or [b]Radio[/b] Source',
+      '(132) Watch an anime that can be found in the same public Interest Stack as one of your listed MAL favorite anime',
     description:
-      '(132) Watch an anime adapted from a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Game.txt">Game</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Radio.txt">Radio</a> Source',
+      '(132) Watch an anime that can be found in the same public Interest Stack as one of your listed MAL favorite anime',
     addlInfo: [],
-    minigames: ['Bingo 21B'],
-    validators: [validateSource(['Game', 'Radio'])],
+    defaultExtraInfo: ['MAL Favorite:', 'Interest Stack:'],
+    courses: [Dessert.IceCream, Dessert.Milkshake],
+    validators: [],
+    manualValidators: [
+      'Anime found in same public interest stack as one of your favorites',
+    ],
   },
   '133': {
     bbCode:
-      '(133) Watch an anime adapted from a [b]Mixed Media[/b] or [b]Web Manga[/b] Source',
+      '(133) Watch an anime that began airing the same season and year as one that was previously watched and listed in your MAL favorites',
     description:
-      '(133) Watch an anime adapted from a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Mixed%20Media.txt">Mixed Media</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Web%20Manga.txt">Web Manga</a> Source',
-    addlInfo: [],
-    minigames: ['Bingo 17A'],
-    validators: [validateSource(['Mixed Media', 'Web Manga'])],
+      '(133) Watch an anime that began airing the same season and year as one that was previously watched and listed in your MAL favorites',
+    addlInfo: [
+      '— The favorite anime must be listed on your profile and must be completed (no airing anime) by you before this item is started',
+      '— The anime do not have to be TV type or show the season/year on their MAL page',
+    ],
+    defaultExtraInfo: ['MAL Favorite:', 'Season/Year:'],
+    courses: [Starter.Salad, Starter.SpringRolls],
+    validators: [],
+    manualValidators: [
+      'Anime began airing the same season/year as one of your favorites',
+      'Favorite anime completed before starting',
+    ],
   },
   '134': {
     bbCode:
-      '(134) Watch an anime adapted from a [b]Novel[/b] or [b]Picture Book[/b] Source',
+      '(134) Watch an anime Recommended to one you [u]already completed[/u] and have listed in your MAL Favorites',
     description:
-      '(134) Watch an anime adapted from a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Novel.txt">Novel</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Picture%20Book.txt">Picture Book</a> Source',
+      '(134) Watch an anime Recommended to one you <u>already completed</u> and have listed in your MAL Favorites',
     addlInfo: [],
-    minigames: ['Tarot Route 2.1'],
-    validators: [validateSource(['Novel', 'Picture Book'])],
+    defaultExtraInfo: ['MAL Favorite:', 'Date Favorite Completed:'],
+    courses: [Main.Burger, Main.Lasagna, Main.Sandwich, Main.Sushi],
+    validators: [],
+    manualValidators: [
+      'Anime recommended to a completed anime in your favorites',
+    ],
   },
   '135': {
     bbCode:
-      '(135) Watch an anime adapted from a [b]Visual Novel[/b] or [b]Web Novel[/b] Source',
+      '(135) Watch an anime in which one of the People listed in your MAL Favorites participated',
     description:
-      '(135) Watch an anime adapted from a <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Visual%20Novel.txt">Visual Novel</a> or <a href="https://github.com/nyomdalee/awc-helper-txt/blob/master/Anime%20by%20Source/Web%20Novel.txt">Web Novel</a> Source',
+      '(135) Watch an anime in which one of the People listed in your MAL Favorites participated',
+    addlInfo: [
+      '— Person must be listed on your profile under People; they can be a voice actor/actress, director, original creator, musical artist, etc.',
+    ],
+    defaultExtraInfo: ['Favorite Person:'],
+    courses: [Main.Lasagna, Main.Pizza, Main.Sandwich],
+    validators: [],
+    manualValidators: ['Favorite person participated in anime'],
+  },
+  '136': {
+    bbCode:
+      '(136) Watch an anime that has no Opening Theme and no Ending Theme listed on MAL',
+    description:
+      '(136) Watch an anime that has no Opening Theme and no Ending Theme listed on MAL',
+    addlInfo: [
+      '— The anime cannot have an Opening Theme and it also cannot have an Ending Theme',
+    ],
+    defaultExtraInfo: [],
+    courses: [Drink.Soda],
+    validators: [validateSongCountEquals(0, 0)],
+    manualValidators: [],
+  },
+  '137': {
+    bbCode:
+      '(137) Watch an anime that has only one Opening Theme and one Ending Theme listed on MAL',
+    description:
+      '(137) Watch an anime that has only one Opening Theme and one Ending Theme listed on MAL',
+    addlInfo: [
+      '— Cannot have 1 OP and 0 ED; cannot have 0 OP and 1 ED; must have exactly one of each',
+    ],
+    defaultExtraInfo: [],
+    courses: [Side.GarlicBread, Side.TheMelon],
+    validators: [validateSongCountEquals(1, 1)],
+    manualValidators: [],
+  },
+  '138': {
+    bbCode:
+      '(138) Watch an anime with either 5+ Opening Themes or 5+ Ending Themes listed',
+    description:
+      '(138) Watch an anime with either 5+ Opening Themes or 5+ Ending Themes listed',
+    addlInfo: [
+      "— Example: 2 OP and 5 ED, 6 OP and 1 ED, 5 OP and 5 ED; it can't be 2 OP and 3 ED",
+    ],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cookie, Dessert.Milkshake],
+    validators: [validateSongCountAtLeast(5, 5)],
+    manualValidators: [],
+  },
+  '139': {
+    bbCode:
+      '(139) Watch an anime in which 2+ [u]different[/u] Opening Theme and/or Ending Theme are performed by the same Artist/Group',
+    description:
+      '(139) Watch an anime in which 2+ <u>different</u> Opening Theme and/or Ending Theme are performed by the same Artist/Group',
+    addlInfo: [
+      '— Must be two different songs; can be 2 OP, 2 ED, 1 OP+1 ED, etc.',
+      '— The artist/group can collaborate with others; for example: in Cowboy Bebop The Seatbelts are credited for the OP "Tank!" and ED #1 "The Real Folk Blues" featuring Mai Yamane',
+    ],
+    defaultExtraInfo: ['Artist/Group:'],
+    courses: [Main.Burger, Main.Omurice, Main.Pizza, Main.Spaghetti],
+    validators: [],
+    manualValidators: [
+      '>=2 different OP/ED themes are by the same artist/group',
+    ],
+  },
+  '140': {
+    bbCode:
+      '(140) Watch an anime with a listed Voice Actor who is also credited with a Theme/Insert Song Performance in the anime',
+    description:
+      '(140) Watch an anime with a listed Voice Actor who is also credited with a Theme/Insert Song Performance in the anime',
+    addlInfo: [
+      "— If the voice actor is credited under their band's name it will not be valid; for example: Kishou Taniyama must be credited with a Theme/Insert Song Performance in the anime instead of GRANRODEO",
+    ],
+    defaultExtraInfo: ['Voice Actor:'],
+    courses: [Starter.Salad, Starter.Soup, Starter.SpringRolls],
+    validators: [],
+    manualValidators: [
+      'VA is credited with a Theme/Insert song performance in anime',
+    ],
+  },
+  '141': {
+    bbCode:
+      '(141) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/1][b]Action[/b][/url]',
+    description:
+      '(141) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/1">Action</a>',
     addlInfo: [],
-    minigames: ['Bingo 21A'],
-    validators: [validateSource(['Visual Novel', 'Web Novel'])],
+    defaultExtraInfo: [],
+    courses: [
+      Starter.ChickenWings,
+      Starter.Prawns,
+      Starter.Soup,
+      Starter.SpringRolls,
+    ],
+    validators: [validateTags(['Action'], 1)],
+    manualValidators: [],
+  },
+  '142': {
+    bbCode:
+      '(142) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/2][b]Adventure[/b][/url]',
+    description:
+      '(142) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/2">Adventure</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie, Dessert.Cake, Dessert.Cookie, Dessert.Dango],
+    validators: [validateTags(['Adventure'], 1)],
+    manualValidators: [],
+  },
+  '143': {
+    bbCode:
+      '(143) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/4][b]Comedy[/b][/url]',
+    description:
+      '(143) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/4">Comedy</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Drink.Coffee, Drink.Lemonade, Drink.Soda, Drink.Tea],
+    validators: [validateTags(['Comedy'], 1)],
+    manualValidators: [],
+  },
+  '144': {
+    bbCode:
+      '(144) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/10][b]Fantasy[/b][/url]',
+    description:
+      '(144) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/10">Fantasy</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Drink.Coffee],
+    validators: [validateTags(['Fantasy'], 1)],
+    manualValidators: [],
+  },
+  '145': {
+    bbCode:
+      '(145) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/19][b]Music[/b][/url]',
+    description:
+      '(145) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/19">Music</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [
+      Side.Fries,
+      Side.Onigiri,
+      Side.OnionRings,
+      Side.TheMelon,
+      Side.Tofu,
+    ],
+    validators: [validateTags(['Music'], 1)],
+    manualValidators: [],
+  },
+  '146': {
+    bbCode:
+      '(146) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/15][b]Kids[/b][/url]',
+    description:
+      '(146) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/15">Kids</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza, Starter.Prawns, Starter.SpringRolls],
+    validators: [validateTags(['Kids'], 1)],
+    manualValidators: [],
+  },
+  '147': {
+    bbCode:
+      '(147) Watch an anime tagged with either [url=https://myanimelist.net/anime/genre/51][b]Anthropomorphic[/b][/url] or [url=https://myanimelist.net/anime/genre/18][b]Mecha[/b][/url]',
+    description:
+      '(147) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/51">Anthropomorphic</a> or <a href="https://myanimelist.net/anime/genre/18">Mecha</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie, Dessert.Cookie],
+    validators: [validateTags(['Anthropomorphic', 'Mecha'], 1)],
+    manualValidators: [],
+  },
+  '148': {
+    bbCode:
+      '(148) Watch an anime tagged with either [url=https://myanimelist.net/anime/genre/5][b]Avant Garde[/b][/url] or [url=https://myanimelist.net/anime/genre/42][b]Seinen[/b][/url]',
+    description:
+      '(148) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/5">Avant Garde</a> or <a href="https://myanimelist.net/anime/genre/42">Seinen</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Sandwich, Main.Spaghetti, Main.Sushi],
+    validators: [validateTags(['Avant Garde', 'Seinen'], 1)],
+    manualValidators: [],
+  },
+  '149': {
+    bbCode:
+      '(149) Watch an anime tagged with either [url=https://myanimelist.net/anime/genre/13][b]Historical[/b][/url] or [url=https://myanimelist.net/anime/genre/27][b]Shounen[/b][/url]',
+    description:
+      '(149) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/13">Historical</a> or <a href="https://myanimelist.net/anime/genre/27">Shounen</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [
+      Main.Burger,
+      Main.Lasagna,
+      Main.Omurice,
+      Main.Pizza,
+      Main.Spaghetti,
+    ],
+    validators: [validateTags(['Historical', 'Shounen'], 1)],
+    manualValidators: [],
+  },
+  '150': {
+    bbCode:
+      '(150) Watch an anime tagged with either [url=https://myanimelist.net/anime/genre/36][b]Slice of Life[/b][/url] or [url=https://myanimelist.net/anime/genre/37][b]Supernatural[/b][/url]',
+    description:
+      '(150) Watch an anime tagged with either <a href="https://myanimelist.net/anime/genre/36">Slice of Life</a> or <a href="https://myanimelist.net/anime/genre/37">Supernatural</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Prawns, Starter.Soup, Starter.SpringRolls],
+    validators: [validateTags(['Slice of Life', 'Supernatural'], 1)],
+    manualValidators: [],
+  },
+  '151': {
+    bbCode:
+      '(151) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/50][b]Adult Cast[/b][/url], [url=https://myanimelist.net/anime/genre/73][b]Reverse Harem[/b][/url] or [url=https://myanimelist.net/anime/genre/75][b]Showbiz[/b][/url]',
+    description:
+      '(151) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/50">Adult Cast</a>, <a href="https://myanimelist.net/anime/genre/73">Reverse Harem</a> or <a href="https://myanimelist.net/anime/genre/75">Showbiz</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Lasagna, Main.Pizza, Main.Spaghetti],
+    validators: [validateTags(['Adult Cast', 'Reverse Harem', 'Showbiz'], 1)],
+    manualValidators: [],
+  },
+  '152': {
+    bbCode:
+      '(152) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/28][b]Boys Love[/b][/url], [url=https://myanimelist.net/anime/genre/7][b]Mystery[/b][/url] or [url=https://myanimelist.net/anime/genre/83][b]Villainess[/b][/url]',
+    description:
+      '(152) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/28">Boys Love</a>, <a href="https://myanimelist.net/anime/genre/7">Mystery</a> or <a href="https://myanimelist.net/anime/genre/83">Villainess</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Burger],
+    validators: [validateTags(['Boys Love', 'Mystery', 'Villainess'], 1)],
+    manualValidators: [],
+  },
+  '153': {
+    bbCode:
+      '(153) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/53][b]Childcare[/b][/url], [url=https://myanimelist.net/anime/genre/20][b]Parody[/b][/url] or [url=https://myanimelist.net/anime/genre/65][b]Magical Sex Shift[/b][/url]',
+    description:
+      '(153) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/53">Childcare</a>, <a href="https://myanimelist.net/anime/genre/20">Parody</a> or <a href="https://myanimelist.net/anime/genre/65">Magical Sex Shift</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Lasagna, Main.Sandwich],
+    validators: [validateTags(['Childcare', 'Parody', 'Magical Sex Shift'], 1)],
+    manualValidators: [],
+  },
+  '154': {
+    bbCode:
+      '(154) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/54][b]Combat Sports[/b][/url], [url=https://myanimelist.net/anime/genre/74][b]Love Status Quo[/b][/url] or [url=https://myanimelist.net/anime/genre/17][b]Martial Arts[/b][/url]',
+    description:
+      '(154) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/54">Combat Sports</a>, <a href="https://myanimelist.net/anime/genre/74">Love Status Quo</a> or <a href="https://myanimelist.net/anime/genre/17">Martial Arts</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cookie, Dessert.IceCream],
+    validators: [
+      validateTags(['Combat Sports', 'Love Status Quo', 'Martial Arts'], 1),
+    ],
+    manualValidators: [],
+  },
+  '155': {
+    bbCode:
+      '(155) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/81][b]Crossdressing[/b][/url], [url=https://myanimelist.net/anime/genre/38][b]Military[/b][/url] or [url=https://myanimelist.net/anime/genre/80][b]Visual Arts[/b][/url]',
+    description:
+      '(155) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/81">Crossdressing</a>, <a href="https://myanimelist.net/anime/genre/38">Military</a> or <a href="https://myanimelist.net/anime/genre/80">Visual Arts</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Sandwich, Main.Spaghetti, Main.Sushi],
+    validators: [validateTags(['Crossdressing', 'Military', 'Visual Arts'], 1)],
+    manualValidators: [],
+  },
+  '156': {
+    bbCode:
+      '(156) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/55][b]Delinquents[/b][/url], [url=https://myanimelist.net/anime/genre/31][b]Super Power[/b][/url] or [url=https://myanimelist.net/anime/genre/76][b]Survival[/b][/url]',
+    description:
+      '(156) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/55">Delinquents</a>, <a href="https://myanimelist.net/anime/genre/31">Super Power</a> or <a href="https://myanimelist.net/anime/genre/76">Survival</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cake],
+    validators: [validateTags(['Delinquents', 'Super Power', 'Survival'], 1)],
+    manualValidators: [],
+  },
+  '157': {
+    bbCode:
+      '(157) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/56][b]Educational[/b][/url], [url=https://myanimelist.net/anime/genre/82][b]Urban Fantasy[/b][/url] or [url=https://myanimelist.net/anime/genre/32][b]Vampire[/b][/url]',
+    description:
+      '(157) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/56">Educational</a>, <a href="https://myanimelist.net/anime/genre/82">Urban Fantasy</a> or <a href="https://myanimelist.net/anime/genre/32">Vampire</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.Milkshake],
+    validators: [validateTags(['Educational', 'Urban Fantasy', 'Vampire'], 1)],
+    manualValidators: [],
+  },
+  '158': {
+    bbCode:
+      '(158) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/57][b]Gag Humor[/b][/url], [url=https://myanimelist.net/anime/genre/35][b]Harem[/b][/url] or [url=https://myanimelist.net/anime/genre/78][b]Time Travel[/b][/url]',
+    description:
+      '(158) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/57">Gag Humor</a>, <a href="https://myanimelist.net/anime/genre/35">Harem</a> or <a href="https://myanimelist.net/anime/genre/78">Time Travel</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cake, Dessert.IceCream],
+    validators: [validateTags(['Gag Humor', 'Harem', 'Time Travel'], 1)],
+    manualValidators: [],
+  },
+  '159': {
+    bbCode:
+      '(159) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/26][b]Girls Love[/b][/url], [url=https://myanimelist.net/anime/genre/14][b]Horror[/b][/url] or [url=https://myanimelist.net/anime/genre/70][b]Performing Arts[/b][/url]',
+    description:
+      '(159) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/26">Girls Love</a>, <a href="https://myanimelist.net/anime/genre/14">Horror</a> or <a href="https://myanimelist.net/anime/genre/70">Performing Arts</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Sandwich, Main.Sushi],
+    validators: [validateTags(['Girls Love', 'Horror', 'Performing Arts'], 1)],
+    manualValidators: [],
+  },
+  '160': {
+    bbCode:
+      '(160) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/58][b]Gore[/b][/url], [url=https://myanimelist.net/anime/genre/40][b]Psychological[/b][/url] or [url=https://myanimelist.net/anime/genre/79][b]Video Game[/b][/url]',
+    description:
+      '(160) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/58">Gore</a>, <a href="https://myanimelist.net/anime/genre/40">Psychological</a> or <a href="https://myanimelist.net/anime/genre/79">Video Game</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Side.GarlicBread, Side.OnionRings],
+    validators: [validateTags(['Gore', 'Psychological', 'Video Game'], 1)],
+    manualValidators: [],
+  },
+  '161': {
+    bbCode:
+      '(161) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/59][b]High Stakes Game[/b][/url], [url=https://myanimelist.net/anime/genre/6][b]Mythology[/b][/url] or [url=https://myanimelist.net/anime/genre/68][b]Organized Crime[/b][/url]',
+    description:
+      '(161) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/59">High Stakes Game</a>, <a href="https://myanimelist.net/anime/genre/6">Mythology</a> or <a href="https://myanimelist.net/anime/genre/68">Organized Crime</a>',
+    addlInfo: [],
+    defaultExtraInfo: [''],
+    courses: [Starter.Gyoza, Starter.Salad, Starter.SpringRolls],
+    validators: [
+      validateTags(['High Stakes Game', 'Mythology', 'Organized Crime'], 1),
+    ],
+    manualValidators: [],
+  },
+  '162': {
+    bbCode:
+      '(162) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/60][b]Idols (Female)[/b][/url], [url=https://myanimelist.net/anime/genre/66][b]Mahou Shoujo[/b][/url] or [url=https://myanimelist.net/anime/genre/72][b]Reincarnation[/b][/url]',
+    description:
+      '(162) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/60">Idols (Female)</a>, <a href="https://myanimelist.net/anime/genre/66">Mahou Shoujo</a> or <a href="https://myanimelist.net/anime/genre/72">Reincarnation</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Salad],
+    validators: [
+      validateTags(['Idols (Female)', 'Mahou Shoujo', 'Reincarnation'], 1),
+    ],
+    manualValidators: [],
+  },
+  '163': {
+    bbCode:
+      '(163) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/61][b]Idols (Male)[/b][/url], [url=https://myanimelist.net/anime/genre/62][b]Isekai[/b][/url] or [url=https://myanimelist.net/anime/genre/3][b]Racing[/b][/url]',
+    description:
+      '(163) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/61">Idols (Male)</a>, <a href="https://myanimelist.net/anime/genre/62">Isekai</a> or <a href="https://myanimelist.net/anime/genre/3">Racing</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Sushi],
+    validators: [validateTags(['Idols (Male)', 'Isekai', 'Racing'], 1)],
+    manualValidators: [],
+  },
+  '164': {
+    bbCode:
+      '(164) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/43][b]Josei[/b][/url], [url=https://myanimelist.net/anime/genre/71][b]Pets[/b][/url] or [url=https://myanimelist.net/anime/genre/25][b]Shoujo[/b][/url]',
+    description:
+      '(164) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/43">Josei</a>, <a href="https://myanimelist.net/anime/genre/71">Pets</a> or <a href="https://myanimelist.net/anime/genre/25">Shoujo</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza, Starter.Salad],
+    validators: [validateTags(['Josei', 'Pets', 'Shoujo'], 1)],
+    manualValidators: [],
+  },
+  '165': {
+    bbCode:
+      '(165) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/64][b]Love Polygon[/b][/url], [url=https://myanimelist.net/anime/genre/69][b]Otaku Culture[/b][/url] or [url=https://myanimelist.net/anime/genre/29][b]Space[/b][/url]',
+    description:
+      '(165) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/64">Love Polygon</a>, <a href="https://myanimelist.net/anime/genre/69">Otaku Culture</a> or <a href="https://myanimelist.net/anime/genre/29">Space</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.Cookie, Dessert.Milkshake],
+    validators: [validateTags(['Love Polygon', 'Otaku Culture', 'Space'], 1)],
+    manualValidators: [],
+  },
+  '166': {
+    bbCode:
+      '(166) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/46][b]Award Winning[/b][/url], [url=https://myanimelist.net/anime/genre/52][b]CGDCT[/b][/url] or [url=https://myanimelist.net/anime/genre/41][b]Suspense[/b][/url]',
+    description:
+      '(166) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/46">Award Winning</a>, <a href="https://myanimelist.net/anime/genre/52">CGDCT</a> or <a href="https://myanimelist.net/anime/genre/41">Suspense</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Side.OnionRings, Side.TheMelon],
+    validators: [validateTags(['Award Winning', 'CGDCT', 'Suspense'], 1)],
+    manualValidators: [],
+  },
+  '167': {
+    bbCode:
+      '(167) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/39][b]Detective[/b][/url], [url=https://myanimelist.net/anime/genre/63][b]Iyashikei[/b][/url] or [url=https://myanimelist.net/anime/genre/77][b]Team Sports[/b][/url]',
+    description:
+      '(167) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/39">Detective</a>, <a href="https://myanimelist.net/anime/genre/63">Iyashikei</a> or <a href="https://myanimelist.net/anime/genre/77">Team Sports</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Lasagna, Main.Sandwich, Main.Sushi],
+    validators: [validateTags(['Detective', 'Iyashikei', 'Team Sports'], 1)],
+    manualValidators: [],
+  },
+  '168': {
+    bbCode:
+      '(168) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/47][b]Gourmet[/b][/url], [url=https://myanimelist.net/anime/genre/67][b]Medical[/b][/url] or [url=https://myanimelist.net/anime/genre/30][b]Sports[/b][/url]',
+    description:
+      '(168) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/47">Gourmet</a>, <a href="https://myanimelist.net/anime/genre/67">Medical</a> or <a href="https://myanimelist.net/anime/genre/30">Sports</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.Burger, Main.Lasagna],
+    validators: [validateTags(['Gourmet', 'Medical', 'Sports'], 1)],
+    manualValidators: [],
+  },
+  '169': {
+    bbCode:
+      '(169) Watch an anime tagged with [url=https://myanimelist.net/anime/genre/21][b]Samurai[/b][/url], [url=https://myanimelist.net/anime/genre/11][b]Strategy Game[/b][/url] or [url=https://myanimelist.net/anime/genre/48][b]Workplace[/b][/url]',
+    description:
+      '(169) Watch an anime tagged with <a href="https://myanimelist.net/anime/genre/21">Samurai</a>, <a href="https://myanimelist.net/anime/genre/11">Strategy Game</a> or <a href="https://myanimelist.net/anime/genre/48">Workplace</a>',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza, Starter.Salad],
+    validators: [validateTags(['Samurai', 'Strategy Game', 'Workplace'], 1)],
+    manualValidators: [],
+  },
+  '170': {
+    bbCode:
+      '(170) Watch an anime tagged with at least TWO of the following: [url=https://myanimelist.net/anime/genre/8][b]Drama[/b][/url], [url=https://myanimelist.net/anime/genre/22][b]Romance[/b][/url], [url=https://myanimelist.net/anime/genre/23][b]School[/b][/url], [url=https://myanimelist.net/anime/genre/24][b]Sci-Fi[/b][/url]',
+    description:
+      '(170) Watch an anime tagged with at least TWO of the following: <a href="https://myanimelist.net/anime/genre/8">Drama</a>, <a href="https://myanimelist.net/anime/genre/22">Romance</a>, <a href="https://myanimelist.net/anime/genre/23">School</a>, <a href="https://myanimelist.net/anime/genre/24">Sci-Fi</a>',
+    addlInfo: [],
+    defaultExtraInfo: ['Tagged With 1:', 'Tagged With 2:'],
+    courses: [Starter.ChickenWings, Starter.Gyoza, Starter.Prawns],
+    validators: [validateTags(['Drama', 'Romance', 'School', 'Sci-Fi'], 2)],
+    manualValidators: [],
+  },
+  '171': {
+    bbCode: '(171) Watch an anime tagged with 2 Genres or more',
+    description: '(171) Watch an anime tagged with 2 Genres or more',
+    addlInfo: ['— Themes and Demographics are not valid'],
+    defaultExtraInfo: [''],
+    courses: [Drink.Tea],
+    validators: [validateGenreCount(2, 'gte')],
+    manualValidators: [],
+  },
+  '172': {
+    bbCode: '(172) Watch an anime tagged with 3 Genres or more',
+    description: '(172) Watch an anime tagged with 3 Genres or more',
+    addlInfo: ['— Themes and Demographics are not valid'],
+    defaultExtraInfo: [],
+    courses: [Dessert.Dango, Dessert.IceCream],
+    validators: [validateGenreCount(3, 'gte')],
+    manualValidators: [],
+  },
+  '173': {
+    bbCode: '(173) Watch an anime rated G - All Ages or PG - Children',
+    description: '(173) Watch an anime rated G - All Ages or PG - Children',
+    addlInfo: ['— Does NOT include anime rated PG-13 - Teens 13 or Older'],
+    defaultExtraInfo: [],
+    courses: [Main.Burger, Main.Lasagna, Main.Omurice, Main.Pizza, Main.Sushi],
+    validators: [validateRating(['G - All Ages', 'PG - Children'])],
+    manualValidators: [],
+  },
+  '174': {
+    bbCode: '(174) Watch an anime rated PG-13 - Teens 13 or older',
+    description: '(174) Watch an anime rated PG-13 - Teens 13 or older',
+    addlInfo: ['— Does NOT include anime rated PG - Children'],
+    defaultExtraInfo: [],
+    courses: [Drink.Soda, Drink.Tea],
+    validators: [validateRating(['PG-13 - Teens 13 or older'])],
+    manualValidators: [],
+  },
+  '175': {
+    bbCode:
+      '(175) Watch an anime rated R -17+, R+ - Mild Nudity, or Rx - Hentai',
+    description:
+      '(175) Watch an anime rated R -17+, R+ - Mild Nudity, or Rx - Hentai',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [
+      Starter.ChickenWings,
+      Starter.Prawns,
+      Starter.Salad,
+      Starter.SpringRolls,
+    ],
+    validators: [
+      validateRating([
+        'R - 17+ (violence & profanity)',
+        'R+ - Mild Nudity',
+        'Rx - Hentai',
+      ]),
+    ],
+    manualValidators: [],
+  },
+  '176': {
+    bbCode: '(176) Watch an anime adapted from a [b]Game[/b] Source',
+    description: '(176) Watch an anime adapted from a <b>Game</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.FishAndChips, Main.Omurice, Main.Pizza, Main.Spaghetti],
+    validators: [validateSource(['Game'])],
+    manualValidators: [],
+  },
+  '177': {
+    bbCode: '(177) Watch an anime adapted from a [b]Manga[/b] Source',
+    description: '(177) Watch an anime adapted from a <b>Manga</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Gyoza, Starter.Prawns, Starter.Soup, Starter.SpringRolls],
+    validators: [validateSource(['Manga'])],
+    manualValidators: [],
+  },
+  '178': {
+    bbCode: '(178) Watch an anime adapted from an [b]Original[/b] Source',
+    description: '(178) Watch an anime adapted from an <b>Original</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie, Dessert.Cake, Dessert.Dango],
+    validators: [validateSource(['Original'])],
+    manualValidators: [],
+  },
+  '179': {
+    bbCode: '(179) Watch an anime adapted from an [b]Unknown[/b] Source',
+    description: '(179) Watch an anime adapted from an <b>Unknown</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [
+      Side.Fries,
+      Side.Onigiri,
+      Side.OnionRings,
+      Side.TheMelon,
+      Side.Tofu,
+    ],
+    validators: [validateSource(['Unknown'])],
+    manualValidators: [],
+  },
+  '180': {
+    bbCode:
+      '(180) Watch an anime adapted from a [b]4-koma Manga[/b] or [b]Novel[/b] Source',
+    description:
+      '(180) Watch an anime adapted from a <b>4-koma Manga</b> or <b>Novel</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Side.TheMelon],
+    validators: [validateSource(['4-koma Manga', 'Novel'])],
+    manualValidators: [],
+  },
+  '181': {
+    bbCode:
+      '(181) Watch an anime adapted from a [b]Book[/b] or [b]Light Novel[/b] Source',
+    description:
+      '(181) Watch an anime adapted from a <b>Book</b> or <b>Light Novel</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Drink.Lemonade],
+    validators: [validateSource(['Book', 'Light Novel'])],
+    manualValidators: [],
+  },
+  '182': {
+    bbCode:
+      '(182) Watch an anime adapted from a [b]Mixed Media[/b] or [b]Visual Novel[/b] Source',
+    description:
+      '(182) Watch an anime adapted from a <b>Mixed Media</b> or <b>Visual Novel</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.Prawns, Starter.Salad],
+    validators: [validateSource(['Mixed Media', 'Visual Novel'])],
+    manualValidators: [],
+  },
+  '183': {
+    bbCode:
+      '(183) Watch an anime adapted from a [b]Music[/b], [b]Picture Book[/b] or [b]Web Manga[/b] Source',
+    description:
+      '(183) Watch an anime adapted from a <b>Music</b>, <b>Picture Book</b> or <b>Web Manga</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Side.Onigiri, Side.TheMelon],
+    validators: [validateSource(['Music', 'Picture Book', 'Web Manga'])],
+    manualValidators: [],
+  },
+  '184': {
+    bbCode:
+      '(184) Watch an anime adapted from an [b]Other[/b] or [b]Web Novel[/b] Source',
+    description:
+      '(184) Watch an anime adapted from an <b>Other</b> or <b>Web Novel</b> Source',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Main.FishAndChips, Main.Lasagna, Main.Pizza, Main.Sandwich],
+    validators: [validateSource(['Other', 'Web Novel'])],
+    manualValidators: [],
+  },
+  '185': {
+    bbCode:
+      '(185) Watch an anime generated using [url=https://spin.moe/][b]Spin.moe[/b][/url] ([url=https://myanimelist.net/forum/?goto=post&topicid=1869539&id=71952295][b]Instructions[/b][/url])',
+    description:
+      '(185) Watch an anime generated using <a href="https://spin.moe/">Spin.moe</a> (<a href="https://myanimelist.net/forum/?goto=post&topicid=1869539&id=71952295">Instructions</a>)',
+    addlInfo: [],
+    defaultExtraInfo: ['Screenshot:'],
+    courses: [Dessert.Cookie, Dessert.IceCream],
+    validators: [],
+    manualValidators: ['Anime generated using spin.moe'],
+  },
+  '186': {
+    bbCode:
+      '(186) Watch a [url=https://anime.jhiday.net/hof/challenge/koreanchinese#challengeItems][b]Chinese or Korean[/b][/url] anime',
+    description:
+      '(186) Watch a <a href="https://anime.jhiday.net/hof/challenge/koreanchinese#challengeItems">Chinese or Korean</a> anime',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Side.Onigiri, Side.Tofu],
+    validators: [],
+    manualValidators: ['Anime present on HOF challenge'],
+  },
+  '187': {
+    bbCode:
+      '(187) Finish an anime that you watched at least one episode of and dropped/put on hold before September 30, 2025 (Alternatively: watch an anime provided by [url=https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68342157][b]other participants[/b][/url])',
+    description:
+      '(187) Finish an anime that you watched at least one episode of and dropped/put on hold before September 30, 2025 (Alternatively: watch an anime provided by <a href="https://myanimelist.net/forum/?goto=post&topicid=1867298&id=68342157">other participants</a>)',
+    addlInfo: [
+      '— The anime needs to have more than one episode and you must have watched at least one episode previously',
+    ],
+    defaultExtraInfo: [
+      'Original Anime Start Date:',
+      'Last Watched Episode Date:',
+      'Eps Previously Watched:',
+      'Screenshot:',
+    ],
+    courses: [Main.Sandwich, Main.Sushi],
+    validators: [],
+    manualValidators: [
+      'Anime dropped/put on-hold before September 30, 2025',
+      'Anime has more than one episode',
+      'At least one episode watched previously',
+    ],
+  },
+  '188': {
+    bbCode:
+      '(188) Watch an anime that has been adapted to [url=https://myanimelist.net/clubs.php?cid=5450][b]live-action[/b][/url]',
+    description:
+      '(188) Watch an anime that has been adapted to <a href="https://myanimelist.net/clubs.php?cid=5450">live-action</a>',
+    addlInfo: [
+      '— The anime needs to be listed under Anime Relations on the right side of the club page',
+    ],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie, Dessert.Milkshake],
+    validators: [],
+    manualValidators: ['Anime present under Anime Relations on club page'],
+  },
+  '189': {
+    bbCode:
+      '(189) Watch an anime that is listed in the [url=https://anidb.net/tag/2669][b]School Clubs[/b][/url] tag on AniDB',
+    description:
+      '(189) Watch an anime that is listed in the <a href="https://anidb.net/tag/2669">School Clubs</a> tag on AniDB',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Starter.ChickenWings, Starter.Gyoza],
+    validators: [],
+    manualValidators: ['Anime has specified tag on AniDB'],
+  },
+  '190': {
+    bbCode: '(190) Watch an anime with no related anime listed',
+    description: '(190) Watch an anime with no related anime listed',
+    addlInfo: [
+      '— There can be no related anime listed, although there can be a related Manga/Light Novel/Novel',
+    ],
+    defaultExtraInfo: [],
+    courses: [Dessert.Dango, Dessert.Milkshake],
+    validators: [],
+    manualValidators: ['Anime has no related anime listed'],
+  },
+  '191': {
+    bbCode:
+      '(191) Watch an [b]afternoon/evening[/b] anime (broadcast between [b]17:00 and 22:59[/b] JST)',
+    description:
+      '(191) Watch an <b>afternoon/evening</b> anime (broadcast between <b>17:00 and 22:59</b> JST)',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Side.Fries, Side.OnionRings, Side.TheMelon],
+    validators: [validateAirTime(['17', '18', '19', '20', '21', '22'])],
+    manualValidators: [],
+  },
+  '192': {
+    bbCode:
+      '(192) Watch a [b]late night[/b] anime (broadcast between [b]23:00 and 03:59[/b] JST)',
+    description:
+      '(192) Watch a <b>late night</b> anime (broadcast between <b>23:00 and 03:59</b> JST)',
+    addlInfo: [],
+    defaultExtraInfo: [],
+    courses: [Dessert.ApplePie, Dessert.Cake, Dessert.Cookie],
+    validators: [validateAirTime(['23', '00', '01', '02', '03'])],
+    manualValidators: [],
   },
 };
+
+export function hashManualValidators(
+  manualValidators: string[],
+  courses?: CourseItem[]
+) {
+  return manualValidators.reduce(
+    (prev, curr) => ({
+      ...prev,
+      [stringHash(curr)]: { valid: false, courses },
+    }),
+    {} as { [hash: number]: ManualValidator }
+  );
+}
+
+export function getManualValidatorsForChallenge(
+  challengeId: string,
+  course: CourseItem
+) {
+  return [
+    ...CHALLENGE_LIST[challengeId].manualValidators,
+    ...COURSE_DATA[course].manualValidators,
+  ];
+}
 
 export function generateChallengeData() {
   const data: ChallengeData = {};
@@ -1552,66 +2752,87 @@ export function generateChallengeData() {
       malId: '',
       startDate: '',
       endDate: '',
-      extraInfo: value.defaultExtraInfo ?? '',
-      minigames: value.minigames,
+      extraInfo:
+        value.defaultExtraInfo?.map((key) => ({
+          key,
+          value: '',
+          required: true,
+        })) ?? [],
+      courses: value.courses,
+      manualValidators: hashManualValidators(value.manualValidators),
     };
+
+    for (const course of value.courses) {
+      for (const extraInfo of COURSE_DATA[course].extraInfo) {
+        data[id].extraInfo.push({
+          key: extraInfo,
+          value: '',
+          required: true,
+          courses: [course],
+        });
+      }
+
+      data[id].manualValidators = {
+        ...data[id].manualValidators,
+        ...hashManualValidators(COURSE_DATA[course].manualValidators, [course]),
+      };
+    }
   }
   return data;
 }
 
-export function getEnabledMinigames(minigames: ConfigData['minigames']) {
-  function whackamoleQuestEnabled(quest: string) {
-    return (
-      minigames.whackamole1 === quest ||
-      minigames.whackamole2 === quest ||
-      minigames.whackamole3 === quest
-    );
+export function getEnabledCourses(courses: ConfigData['courses']) {
+  function isCourseEnabled(course: any) {
+    if (Object.values(Drink).includes(course))
+      return courses.drink.enabled && courses.drink.value === course;
+    else if (Object.values(Starter).includes(course))
+      return courses.starter.enabled && courses.starter.value === course;
+    else if (Object.values(Main).includes(course))
+      return courses.main.enabled && courses.main.value === course;
+    else if (Object.values(Side).includes(course))
+      return courses.side.enabled && courses.side.value === course;
+    else return courses.dessert.enabled && courses.dessert.value === course;
   }
 
-  return {
-    Darts: minigames.darts,
-    'Bingo 17A': minigames.bingo && minigames.bingo17 === '17A',
-    'Bingo 17B': minigames.bingo && minigames.bingo17 === '17B',
-    'Bingo 21A': minigames.bingo && minigames.bingo21 === '21A',
-    'Bingo 21B': minigames.bingo && minigames.bingo21 === '21B',
-    'Plinko Tier 1': minigames.plinko,
-    'Plinko Tier 2': minigames.plinko,
-    'Plinko Tier 3': minigames.plinko,
-    'Whack-a-Mole A': minigames.whackamole && whackamoleQuestEnabled('A'),
-    'Whack-a-Mole B': minigames.whackamole && whackamoleQuestEnabled('B'),
-    'Whack-a-Mole C': minigames.whackamole && whackamoleQuestEnabled('C'),
-    'Whack-a-Mole D': minigames.whackamole && whackamoleQuestEnabled('D'),
-    'Whack-a-Mole E': minigames.whackamole && whackamoleQuestEnabled('E'),
-    'Tarot Route 1': minigames.tarot,
-    'Tarot Route 2':
-      minigames.tarot &&
-      (minigames.tarotEnding === '2.1' || minigames.tarotEnding === '2.2'),
-    'Tarot Route 3':
-      minigames.tarot &&
-      (minigames.tarotEnding === '3.1' || minigames.tarotEnding === '3.2'),
-    'Tarot Route 2.1': minigames.tarot && minigames.tarotEnding === '2.1',
-    'Tarot Route 2.2': minigames.tarot && minigames.tarotEnding === '2.2',
-    'Tarot Route 3.1': minigames.tarot && minigames.tarotEnding === '3.1',
-    'Tarot Route 3.2': minigames.tarot && minigames.tarotEnding === '3.2',
-    'Duck Pond': minigames.duckpond,
-  };
+  return COURSE_VALUES.reduce(
+    (prev, curr) => ({
+      ...prev,
+      [curr]: isCourseEnabled(curr),
+    }),
+    {} as Record<CourseItem, boolean>
+  );
 }
 
 export function getEnabledChallenges(
-  minigames: ConfigData['minigames'],
+  courses: ConfigData['courses'],
   challengeData: ChallengeData
 ) {
-  const enabledMinigames = getEnabledMinigames(minigames);
+  const enabledCourses = getEnabledCourses(courses);
   const enabledChallenges: ChallengeData = {};
   for (const [id, value] of Object.entries(challengeData)) {
     if (
-      value.minigames.some(
-        (minigame) =>
-          enabledMinigames[minigame as keyof typeof enabledMinigames]
+      value.courses.some(
+        (course) => enabledCourses[course as keyof typeof enabledCourses]
       )
     ) {
       enabledChallenges[id] = value;
     }
   }
   return enabledChallenges;
+}
+
+export function generateCourseValidatorInfo() {
+  return Object.entries(COURSE_DATA).reduce(
+    (prevData, [course, datum]) => ({
+      ...prevData,
+      [course]: datum.courseValidatorInfo?.reduce(
+        (prev, curr) => ({
+          ...prev,
+          [curr.name]: curr.values?.[0] ?? '',
+        }),
+        {} as Record<string, string>
+      ),
+    }),
+    {} as Record<CourseItem, Record<string, string>>
+  );
 }

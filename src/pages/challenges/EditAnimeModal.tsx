@@ -48,6 +48,9 @@ const EditAnimeModal: React.FC<EditDataModalProps> = ({
           ...formData!.aired.to,
         },
       },
+      statistics: {
+        ...formData!.statistics,
+      },
     };
 
     path.reduce((acc, key, index) => {
@@ -63,6 +66,11 @@ const EditAnimeModal: React.FC<EditDataModalProps> = ({
       );
 
     setFormData(updatedFormData);
+  };
+
+  const handleCancel = () => {
+    setFormData(challengeData.animeData);
+    onClose();
   };
 
   const handleSave = () => {
@@ -373,10 +381,93 @@ const EditAnimeModal: React.FC<EditDataModalProps> = ({
               type="number"
             />
           </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField
+              fullWidth
+              label="Licensors"
+              name="licensors"
+              value={formData?.licensors?.join(',')}
+              onChange={(e) =>
+                handleChange(e.target.name, e.target.value.split(','))
+              }
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField
+              fullWidth
+              label="Producers"
+              name="producers"
+              value={formData?.producers?.join(',')}
+              onChange={(e) =>
+                handleChange(e.target.name, e.target.value.split(','))
+              }
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField
+              fullWidth
+              label="Studios"
+              name="studios"
+              value={formData?.studios?.join(',')}
+              onChange={(e) =>
+                handleChange(e.target.name, e.target.value.split(','))
+              }
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField
+              fullWidth
+              label="Watching"
+              name="statistics.watching"
+              value={formData?.statistics.watching}
+              onChange={(e) => handleChange(e.target.name, e.target.value)}
+              type="number"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField
+              fullWidth
+              label="Completed"
+              name="statistics.completed"
+              value={formData?.statistics.completed}
+              onChange={(e) => handleChange(e.target.name, e.target.value)}
+              type="number"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 4 }}>
+            <TextField
+              fullWidth
+              label="Plan To Watch"
+              name="statistics.ptw"
+              value={formData?.statistics.ptw}
+              onChange={(e) => handleChange(e.target.name, e.target.value)}
+              type="number"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              label="On Hold"
+              name="statistics.onHold"
+              value={formData?.statistics.onHold}
+              onChange={(e) => handleChange(e.target.name, e.target.value)}
+              type="number"
+            />
+          </Grid>
+          <Grid size={{ xs: 12, sm: 6 }}>
+            <TextField
+              fullWidth
+              label="Dropped"
+              name="statistics.dropped"
+              value={formData?.statistics.dropped}
+              onChange={(e) => handleChange(e.target.name, e.target.value)}
+              type="number"
+            />
+          </Grid>
         </Grid>
       </DialogContent>
       <DialogActions>
-        <Button onClick={onClose}>Cancel</Button>
+        <Button onClick={handleCancel}>Cancel</Button>
         <Button onClick={handleSave} color="primary">
           Save
         </Button>

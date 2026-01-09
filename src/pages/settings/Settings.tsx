@@ -10,7 +10,7 @@ import { generateBBCode } from './utils';
 import DataBackup from './DataBackup';
 import { loadAnime } from '../../utils';
 import { useState } from 'react';
-import { getEnabledMinigames } from '../challenges/data/data';
+import { getEnabledCourses } from '../challenges/data/data';
 import { ChallengeEntry } from '../challenges/types';
 import { ConfigData } from '../config/types';
 
@@ -36,18 +36,13 @@ const Settings = (props: SettingsProps) => {
     setLoading(false);
   };
 
-  const isChallengeInEnabledMinigame = (
+  const isChallengeInEnabledCourse = (
     challenge: ChallengeEntry,
-    minigames: ConfigData['minigames']
+    courses: ConfigData['courses']
   ) => {
-    const enabledMinigames = getEnabledMinigames(minigames);
-    for (const minigame of challenge.minigames) {
-      if (
-        enabledMinigames[
-          minigame as keyof ReturnType<typeof getEnabledMinigames>
-        ]
-      )
-        return true;
+    const enabledCourses = getEnabledCourses(courses);
+    for (const course of challenge.courses) {
+      if (enabledCourses[course]) return true;
     }
     return false;
   };
@@ -90,7 +85,7 @@ const Settings = (props: SettingsProps) => {
         Orphaned Anime
       </Typography>
       <Typography variant="body1" marginLeft="1%">
-        Anime whose minigames have been disabled but are still set.
+        Anime whose courses have been disabled but are still set.
       </Typography>
       <List
         sx={{
@@ -104,10 +99,7 @@ const Settings = (props: SettingsProps) => {
           .filter(
             (challenge) =>
               challenge.malId &&
-              !isChallengeInEnabledMinigame(
-                challenge,
-                props.configData.minigames
-              )
+              !isChallengeInEnabledCourse(challenge, props.configData.courses)
           )
           .map((c) => (
             <ListItem key={c.id}>
@@ -122,7 +114,7 @@ const Settings = (props: SettingsProps) => {
                 }
                 secondary={
                   <div>
-                    Challenge: {c.id} - Minigames: {c.minigames.join(', ')}
+                    Challenge: {c.id} - Courses: {c.courses.join(', ')}
                   </div>
                 }
               />

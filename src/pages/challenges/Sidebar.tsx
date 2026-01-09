@@ -1,32 +1,34 @@
 import { Typography } from '@mui/material';
 import './Sidebar.css';
 import { SidebarProps } from './types';
+import { CourseItem } from '../../types';
 
 const Sidebar = (props: SidebarProps) => {
-  const { minigames, setCurrentMinigame } = props;
-  if (!Object.values(minigames).some((m) => m)) {
+  const { courses, setCurrentCourse } = props;
+  if (!Object.values(courses).some((m) => m)) {
     return (
       <div className="sidebar">
         <ul>
           <li>
             <Typography>
-              No Mini-Games Enabled. Enable Some in Config.
+              No courses enabled. Enable some in the config.
             </Typography>
           </li>
         </ul>
       </div>
     );
   }
+  console.log(courses);
 
   return (
     <div className="sidebar">
       <ul>
-        {Object.keys(minigames).map((page) => (
+        {(Object.keys(courses) as CourseItem[]).map((page) => (
           <li
             key={page}
             className="sidebar-page"
-            hidden={!minigames[page]}
-            onClick={() => setCurrentMinigame(page)}
+            hidden={!courses[page]}
+            onClick={() => setCurrentCourse(page)}
           >
             <Typography>{page}</Typography>
           </li>
