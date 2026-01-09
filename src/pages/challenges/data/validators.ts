@@ -197,7 +197,7 @@ export function validateBroadcastDate(days: string[]): Validator {
   return (params: ValidatorParams) => {
     const broadcastDate = params.anime.aired.day;
     return {
-      criterion: `Anime must air on ${arrayToList(days)}`,
+      criterion: `Anime must air on day ${arrayToList(days)}`,
       valid: days.includes(broadcastDate),
     };
   };
@@ -582,7 +582,7 @@ export function cvalidateBroadcastDate(course: CourseItem): Validator {
   return (params: ValidatorParams) => {
     const day = params.config.courseValidatorInfo[course].Day;
     return {
-      criterion: `Anime must air on ${day}`,
+      criterion: `Anime must air on day ${day}`,
       valid: day === params.anime.aired.day,
     };
   };
