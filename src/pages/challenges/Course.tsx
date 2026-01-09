@@ -157,7 +157,7 @@ const Course = (props: CourseProps) => {
   return (
     <div className="main-content">
       <Typography variant="h4" color="common.white">
-        {props.currentCourse}
+        {props.currentCourse} - {COURSE_DATA[props.currentCourse].label}
       </Typography>
       <Typography variant="h6" color="common.white">
         Complete {COURSE_DATA[props.currentCourse].requiredChallenges}/
