@@ -694,12 +694,20 @@ export function cvalidateStartsWith(course: CourseItem): Validator {
   return (params: ValidatorParams) => {
     const letter = params.config.courseValidatorInfo[course]['Letter'];
     const titleFirstChar = params.anime.title.toUpperCase().charAt(0);
+    const criterionText =
+      letter === 'Other'
+        ? 'a symbol'
+        : letter === 'Any Number'
+          ? 'a number'
+          : letter;
     return {
-      criterion: `Anime title must start with ${letter === 'Other' ? 'a symbol' : letter}`,
+      criterion: `Anime title must start with ${criterionText}`,
       valid:
         letter === 'Other'
           ? !!titleFirstChar.match(/[^a-zA-Z0-9]/)
-          : titleFirstChar === letter,
+          : letter === 'Any Number'
+            ? !!titleFirstChar.match(/\d/)
+            : titleFirstChar === letter,
     };
   };
 }

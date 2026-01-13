@@ -334,7 +334,7 @@ export const COURSE_DATA: CourseData = {
         type: 'select',
         values: [
           ...String.fromCharCode(...range(65, 91)).split(''),
-          ...range(10).map((n) => n.toString()),
+          'Any Number',
           'Other',
         ],
       },
