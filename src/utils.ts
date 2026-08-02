@@ -20,15 +20,15 @@ export async function loadAnime(
   }
 
   const { data } = await (
-    await fetch(`https://api.jikan.moe/v4/anime/${malId}/full`)
+    await fetch(`https://api.tenrai.org/v1/anime/${malId}/full`)
   ).json();
 
   const charactersData = await (
-    await fetch(`https://api.jikan.moe/v4/anime/${malId}/characters`)
+    await fetch(`https://api.tenrai.org/v1/anime/${malId}/characters`)
   ).json();
 
   const statisticsData = (await (
-    await fetch(`https://api.jikan.moe/v4/anime/${malId}/statistics`)
+    await fetch(`https://api.tenrai.org/v1/anime/${malId}/statistics`)
   ).json()) as { data: Record<string, number> };
 
   if (!data) {
